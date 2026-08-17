@@ -1,0 +1,14 @@
+.vs/
+build/
+bin/
+*.log
+*.user
+*.suo
+*.VC.db
+*.VC.opendb
+*.ipch
+*.aps
+*.ncb
+*.opensdf
+*.sdf
+exported_fonts/

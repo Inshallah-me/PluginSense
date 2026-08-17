@@ -1,0 +1,609 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{0011461c-0e5f-401c-ac58-23719d1ef845}</ProjectGuid>
+    <RootNamespace>PluginSense</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <OutDir>$(MSBuildProjectDirectory)\bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(MSBuildProjectDirectory)\build\msvc\$(MSBuildProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <LibraryPath>$(MSBuildProjectDirectory)\lib;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>$(MSBuildProjectDirectory)\src\;$(MSBuildProjectDirectory)\src\Common\Include\;$(MSBuildProjectDirectory)\src\Common\Include\ImGui\;$(MSBuildProjectDirectory)\src\PluginSenseClient\GUI\;$(IncludePath)</IncludePath>
+    <GenerateManifest>false</GenerateManifest>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;PLUGINSENSE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+      <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;PLUGINSENSE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+      <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;PLUGINSENSE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+      <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;PLUGINSENSE_EXPORTS;_WINDOWS;_USRDLL;RELEASE_BUILD;STB_IMAGE_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+      <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="src\PluginSenseClient\CPluginSenseClient.cpp" />
+    <ClCompile Include="src\PluginSenseClient\CPluginSenseGUI.cpp" />
+    <ClCompile Include="src\PluginSenseClient\Features\CNameChanger\CNameChanger.cpp" />
+    <ClCompile Include="src\PluginSenseClient\Features\CChatSpammer\CChatSpammer.cpp" />
+    <ClCompile Include="src\PluginSenseClient\Features\CKillSay\CKillSay.cpp" />
+    <ClCompile Include="src\PluginSenseClient\Features\CFortniteDamage\CFortniteDamage.cpp" />
+    <ClCompile Include="src\PluginSenseClient\Features\CWorldVisuals\CWorldVisuals.cpp" />
+    <ClCompile Include="src\PluginSenseClient\Features\CWeather\CWeather.cpp" />
+    <ClCompile Include="src\PluginSenseClient\Features\CMotionCamera\CMotionCamera.cpp" />
+    <ClCompile Include="src\PluginSenseClient\Features\CVelocityDisplay\CVelocityDisplay.cpp" />
+    <ClCompile Include="src\PluginSenseClient\Features\CFakeCooldown\CFakeCooldown.cpp" />
+    <ClCompile Include="src\PluginSenseClient\Features\CHitLog\CHitLog.cpp" />
+    <ClCompile Include="src\PluginSenseClient\Features\CVacNetReveal\CVacNetReveal.cpp" />
+    <ClCompile Include="src\PluginSenseClient\Features\CLobbySpoof\CLobbySpoof.cpp" />
+    <ClCompile Include="src\PluginSenseClient\Features\CWeaponModel\CWeaponModel.cpp" />
+    <ClCompile Include="src\PluginSenseClient\Assets\fortnite_digits.cpp" />
+    <ClCompile Include="src\PluginSenseClient\Fonts\CFont.cpp" />
+    <ClCompile Include="src\PluginSenseClient\Fonts\CFontManager.cpp" />
+    <ClCompile Include="src\PluginSenseClient\GUI\CPluginSenseMenu.cpp" />
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <ClCompile Include="src\PluginSenseClient\Render\CRender.cpp" />
+    <ClCompile Include="src\PluginSenseClient\Render\CRenderStackSystem.cpp" />
+    <ClCompile Include="src\PluginSenseClient\Settings\CSettingsJson.cpp" />
+    <ClCompile Include="src\PluginSenseClient\Settings\MenuState.cpp" />
+    <ClCompile Include="src\Common\CrashLog.cpp" />
+    <ClCompile Include="src\Common\DevLog.cpp" />
+    <ClCompile Include="src\Common\Helpers\ModuleLoaderHelper.cpp" />
+    <ClCompile Include="src\Common\Helpers\StringHelper.cpp" />
+    <ClCompile Include="src\Common\Include\ImGui\imgui.cpp" />
+    <ClCompile Include="src\Common\Include\ImGui\imgui_draw.cpp" />
+    <ClCompile Include="src\Common\Include\ImGui\imgui_impl_dx11.cpp" />
+    <ClCompile Include="src\Common\Include\ImGui\imgui_impl_win32.cpp" />
+    <ClCompile Include="src\Common\Include\ImGui\imgui_tables.cpp" />
+    <ClCompile Include="src\Common\Include\ImGui\imgui_widgets.cpp" />
+    <ClCompile Include="src\Common\Include\ImGui\Misc\freetype\imgui_freetype.cpp" />
+    <ClCompile Include="src\Common\MemoryEngine.cpp" />
+    <ClCompile Include="src\CS2\CBasePattern.cpp" />
+    <ClCompile Include="src\CS2\CHook_Loader.cpp" />
+    <ClCompile Include="src\CS2\CSDK_Loader.cpp" />
+    <ClCompile Include="src\CS2\Hook\Hook_AntiTamper.cpp" />
+    <ClCompile Include="src\CS2\Hook\Hook_CreateMove.cpp" />
+    <ClCompile Include="src\CS2\Hook\Hook_CreateSwapChain.cpp" />
+    <ClCompile Include="src\CS2\Hook\Hook_FireEventClientSide.cpp" />
+    <ClCompile Include="src\CS2\Hook\Hook_ForceButtonsDown.cpp" />
+    <ClCompile Include="src\CS2\Hook\Hook_SetShaderParam.cpp" />
+    <ClCompile Include="src\CS2\Hook\Hook_SetPostProcessVec.cpp" />
+    <ClCompile Include="src\CS2\Hook\Hook_ServiceRead.cpp" />
+    <ClCompile Include="src\CS2\Hook\Hook_OverrideView.cpp" />
+    <ClCompile Include="src\CS2\Hook\Hook_FrameStageNotify.cpp" />
+    <ClCompile Include="src\CS2\Hook\Hook_IsLoadoutAllowed.cpp" />
+    <ClCompile Include="src\CS2\Hook\Hook_EnableCursor.cpp" />
+    <ClCompile Include="src\CS2\Hook\Hook_IsRelativeMouseMode.cpp" />
+    <ClCompile Include="src\CS2\Hook\Hook_MouseInputEnabled.cpp" />
+    <ClCompile Include="src\CS2\Hook\Hook_OnClientOutput.cpp" />
+    <ClCompile Include="src\CS2\Hook\Hook_ParseMessage.cpp" />
+    <ClCompile Include="src\CS2\Hook\Hook_Present.cpp" />
+    <ClCompile Include="src\CS2\Hook\Hook_ProcessSubTickInput.cpp" />
+    <ClCompile Include="src\CS2\Hook\Hook_ResizeBuffers.cpp" />
+    <ClCompile Include="src\CS2\Protobuf\base_gcmessages.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\clientmessages.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\connectionless_netmessages.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\cstrike15_gcmessages.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\cstrike15_usermessages.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\cs_gameevents.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\cs_prediction_events.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\cs_usercmd.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\c_peer2peer_netmessages.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\demo.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\econ_gcmessages.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\engine_gcmessages.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\enums_clientserver.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\fatdemo.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\gameevents.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\gcsdk_gcmessages.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\gcsystemmsgs.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\netmessages.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\networkbasetypes.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\networksystem_protomessages.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\network_connection.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\prediction_events.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\source2_steam_stats.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\steamdatagram_messages_auth.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\steamdatagram_messages_sdr.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\steammessages.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\steammessages_cloud.steamworkssdk.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\steammessages_gamenetworkingui.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\steammessages_helprequest.steamworkssdk.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\steammessages_oauth.steamworkssdk.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\steammessages_player.steamworkssdk.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\steammessages_publishedfile.steamworkssdk.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\steammessages_unified_base.steamworkssdk.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\steamnetworkingsockets_messages.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\steamnetworkingsockets_messages_certs.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\steamnetworkingsockets_messages_udp.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\te.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\uifontfile_format.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\usercmd.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\usermessages.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\valveextensions.pb.cc">
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="src\CS2\SDK\CFunctionList.cpp" />
+    <ClCompile Include="src\CS2\SDK\CSchemaOffset.cpp" />
+    <ClCompile Include="src\CS2\SDK\Signatures.cpp" />
+    <ClCompile Include="src\CS2\SDK\Cstrike15\CCSInventoryManager.cpp" />
+    <ClCompile Include="src\CS2\SDK\Cstrike15\CCSPlayerInventory.cpp" />
+    <ClCompile Include="src\CS2\SDK\Econ\CEconItem.cpp" />
+    <ClCompile Include="src\CS2\SDK\Econ\CEconItemDefinition.cpp" />
+    <ClCompile Include="src\CS2\SDK\Econ\CEconItemSchema.cpp" />
+    <ClCompile Include="src\CS2\SDK\Econ\CEconItemSystem.cpp" />
+    <ClCompile Include="src\CS2\SDK\GCSDK\CGCClientSharedObjectCache.cpp" />
+    <ClCompile Include="src\CS2\SDK\GCSDK\CGCClientSharedObjectTypeCache.cpp" />
+    <ClCompile Include="src\CS2\SDK\Interface\IGameEvent.cpp" />
+    <ClCompile Include="src\CS2\SDK\Interface\Interface.cpp" />
+    <ClCompile Include="src\CS2\SDK\Math\Math.cpp" />
+    <ClCompile Include="src\CS2\SDK\Math\Matrix.cpp" />
+    <ClCompile Include="src\CS2\SDK\Math\QAngle.cpp" />
+    <ClCompile Include="src\CS2\SDK\Math\Vector3.cpp" />
+    <ClCompile Include="src\CS2\SDK\Math\Vector4.cpp" />
+    <ClCompile Include="src\CS2\SDK\SDK.cpp" />
+    <ClCompile Include="src\CS2\SDK\TIER0\TIER0_Functions.cpp" />
+    <ClCompile Include="src\CS2\SDK\Types\CEntityData.cpp" />
+    <ClCompile Include="src\CS2\SDK\Types\CHandle.cpp" />
+    <ClCompile Include="src\DllLauncher.cpp" />
+    <ClCompile Include="src\DllMain.cpp" />
+    <ClCompile Include="src\GameClient\CL_Bypass.cpp" />
+    <ClCompile Include="src\GameClient\CL_ItemDefinition.cpp" />
+    <ClCompile Include="src\GameClient\CL_Players.cpp" />
+    <ClCompile Include="src\GameClient\CL_Trace.cpp" />
+    <ClCompile Include="src\GameClient\CL_Weapons.cpp" />
+  <ClCompile Include="src\PluginSenseClient\GUI\framework_w\animations\animations.cc" /><ClCompile Include="src\PluginSenseClient\GUI\framework_w\framework\config_system\config_system.cc" /><ClCompile Include="src\PluginSenseClient\GUI\framework_w\framework\context\context.cc" /><ClCompile Include="src\PluginSenseClient\GUI\framework_w\framework\gui\button\button.cc" /><ClCompile Include="src\PluginSenseClient\GUI\framework_w\framework\gui\checkbox\checkbox.cc" /><ClCompile Include="src\PluginSenseClient\GUI\framework_w\framework\gui\child\child.cc" /><ClCompile Include="src\PluginSenseClient\GUI\framework_w\framework\gui\colorpicker\colorpicker.cc" /><ClCompile Include="src\PluginSenseClient\GUI\framework_w\framework\gui\dropdown\dropdown.cc" /><ClCompile Include="src\PluginSenseClient\GUI\framework_w\framework\gui\interactive_preview\interactive_preview.cc" /><ClCompile Include="src\PluginSenseClient\GUI\framework_w\framework\gui\keybind\keybind.cc" /><ClCompile Include="src\PluginSenseClient\GUI\framework_w\framework\gui\listbox\listbox.cc" /><ClCompile Include="src\PluginSenseClient\GUI\framework_w\framework\gui\multibox\multibox.cc" /><ClCompile Include="src\PluginSenseClient\GUI\framework_w\framework\gui\popup\popup.cc" /><ClCompile Include="src\PluginSenseClient\GUI\framework_w\framework\gui\search\search.cc" /><ClCompile Include="src\PluginSenseClient\GUI\framework_w\framework\gui\slider\slider.cc" /><ClCompile Include="src\PluginSenseClient\GUI\framework_w\framework\gui\tab\tab.cc" /><ClCompile Include="src\PluginSenseClient\GUI\framework_w\framework\gui\text\text.cc" /><ClCompile Include="src\PluginSenseClient\GUI\framework_w\framework\gui\textinput\textinput.cc" /><ClCompile Include="src\PluginSenseClient\GUI\framework_w\framework\gui\widgets\widgets.cc" /><ClCompile Include="src\PluginSenseClient\GUI\framework_w\framework\gui\window\window.cc" /><ClCompile Include="src\PluginSenseClient\GUI\framework_w\framework\menu.cc" /><ClCompile Include="src\PluginSenseClient\GUI\framework_w\render\blur_engine\blur_engine.cc" /><ClCompile Include="src\PluginSenseClient\GUI\framework_w\render\fonts\bg.cc" /><ClCompile Include="src\PluginSenseClient\GUI\framework_w\render\fonts\fa.cc" /><ClCompile Include="src\PluginSenseClient\GUI\framework_w\render\fonts\sf_pro.cc" /><ClCompile Include="src\PluginSenseClient\GUI\framework_w\render\fonts\sf_pro_bold.cc" /><ClCompile Include="src\PluginSenseClient\GUI\framework_w\render\render.cc" /></ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\PluginSenseClient\CPluginSenseClient.hpp" />
+    <ClInclude Include="src\PluginSenseClient\CPluginSenseGUI.hpp" />
+    <ClInclude Include="src\PluginSenseClient\Features\CNameChanger\CNameChanger.hpp" />
+    <ClInclude Include="src\PluginSenseClient\Features\CChatSpammer\CChatSpammer.hpp" />
+    <ClInclude Include="src\PluginSenseClient\Features\CKillSay\CKillSay.hpp" />
+    <ClInclude Include="src\PluginSenseClient\Features\CFortniteDamage\CFortniteDamage.hpp" />
+    <ClInclude Include="src\PluginSenseClient\Features\CWorldVisuals\CWorldVisuals.hpp" />
+    <ClInclude Include="src\PluginSenseClient\Features\CWeather\CWeather.hpp" />
+    <ClInclude Include="src\PluginSenseClient\Features\CMotionCamera\CMotionCamera.hpp" />
+    <ClInclude Include="src\PluginSenseClient\Features\CWeather\weather_particles.hpp" />
+    <ClInclude Include="src\PluginSenseClient\Features\CVelocityDisplay\CVelocityDisplay.hpp" />
+    <ClInclude Include="src\PluginSenseClient\Features\CFakeCooldown\CFakeCooldown.hpp" />
+    <ClInclude Include="src\PluginSenseClient\Features\CHitLog\CHitLog.hpp" />
+    <ClInclude Include="src\PluginSenseClient\Features\CVacNetReveal\CVacNetReveal.hpp" />
+    <ClInclude Include="src\PluginSenseClient\Features\CLobbySpoof\CLobbySpoof.hpp" />
+    <ClInclude Include="src\PluginSenseClient\Features\CWeaponModel\CWeaponModel.hpp" />
+    <ClInclude Include="src\PluginSenseClient\Assets\fortnite_digits.hpp" />
+    <ClInclude Include="src\PluginSenseClient\Assets\FredokaOne_Regular.hpp" />
+    <ClInclude Include="src\PluginSenseClient\Fonts\CFont.hpp" />
+    <ClInclude Include="src\PluginSenseClient\Fonts\CFontManager.hpp" />
+    <ClInclude Include="src\PluginSenseClient\GUI\CPluginSenseMenu.hpp" />
+    <ClInclude Include="src\PluginSenseClient\Render\CRender.hpp" />
+    <ClInclude Include="src\PluginSenseClient\Render\CRenderStackSystem.hpp" />
+    <ClInclude Include="src\PluginSenseClient\Settings\CSettingsJson.hpp" />
+    <ClInclude Include="src\PluginSenseClient\Settings\MenuState.hpp" />
+    <ClInclude Include="src\PluginSenseClient\Settings\Settings.hpp" />
+    <ClInclude Include="src\Common\Base64.h" />
+    <ClInclude Include="src\Common\Common.hpp" />
+    <ClInclude Include="src\Common\CrashLog.hpp" />
+    <ClInclude Include="src\Common\DevLog.hpp" />
+    <ClInclude Include="src\Common\Helpers\ModuleLoaderHelper.hpp" />
+    <ClInclude Include="src\Common\Helpers\StringHelper.hpp" />
+    <ClInclude Include="src\Common\Include\Config.hpp" />
+    <ClInclude Include="src\Common\Include\Fnv1a\Hash_Fnv1a_Constexpr.hpp" />
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\CFW1ColorRGBA.h" />
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\CFW1DWriteRenderTarget.h" />
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\CFW1Factory.h" />
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\CFW1FontWrapper.h" />
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\CFW1GlyphAtlas.h" />
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\CFW1GlyphProvider.h" />
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\CFW1GlyphRenderStates.h" />
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\CFW1GlyphSheet.h" />
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\CFW1GlyphVertexDrawer.h" />
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\CFW1Object.h" />
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\CFW1StateSaver.h" />
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\CFW1TextGeometry.h" />
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\CFW1TextRenderer.h" />
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\FW1CompileSettings.h" />
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\FW1FontWrapper.h" />
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\FW1Precompiled.h" />
+    <ClInclude Include="src\Common\Include\ImGui\imconfig.h" />
+    <ClInclude Include="src\Common\Include\ImGui\imgui.h" />
+    <ClInclude Include="src\Common\Include\ImGui\imgui_impl_dx11.h" />
+    <ClInclude Include="src\Common\Include\ImGui\imgui_impl_win32.h" />
+    <ClInclude Include="src\Common\Include\ImGui\imgui_internal.h" />
+    <ClInclude Include="src\Common\Include\ImGui\imstb_rectpack.h" />
+    <ClInclude Include="src\Common\Include\ImGui\imstb_textedit.h" />
+    <ClInclude Include="src\Common\Include\ImGui\imstb_truetype.h" />
+    <ClInclude Include="src\Common\Include\ImGui\Misc\freetype\imgui_freetype.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\allocators.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\cursorstreamwrapper.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\document.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\encodedstream.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\encodings.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\error\en.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\error\error.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\filereadstream.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\filewritestream.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\fwd.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\internal\biginteger.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\internal\clzll.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\internal\diyfp.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\internal\dtoa.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\internal\ieee754.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\internal\itoa.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\internal\meta.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\internal\pow10.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\internal\regex.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\internal\stack.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\internal\strfunc.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\internal\strtod.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\internal\swap.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\istreamwrapper.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\memorybuffer.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\memorystream.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\msinttypes\inttypes.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\msinttypes\stdint.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\ostreamwrapper.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\pointer.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\prettywriter.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\rapidjson.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\reader.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\schema.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\stream.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\stringbuffer.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\uri.h" />
+    <ClInclude Include="src\Common\Include\rapidjson\writer.h" />
+    <ClInclude Include="src\Common\Include\stb\stb_image.h" />
+    <ClInclude Include="src\Common\Include\XorStr\XorStr.hpp" />
+    <ClInclude Include="src\Common\MemoryEngine.hpp" />
+    <ClInclude Include="src\CS2\CBasePattern.hpp" />
+    <ClInclude Include="src\CS2\CHook_Loader.hpp" />
+    <ClInclude Include="src\CS2\CSDK_Loader.hpp" />
+    <ClInclude Include="src\CS2\Hook\Hook_AntiTamper.hpp" />
+    <ClInclude Include="src\CS2\Hook\Hook_CreateMove.hpp" />
+    <ClInclude Include="src\CS2\Hook\Hook_CreateSwapChain.hpp" />
+    <ClInclude Include="src\CS2\Hook\Hook_FireEventClientSide.hpp" />
+    <ClInclude Include="src\CS2\Hook\Hook_ForceButtonsDown.hpp" />
+    <ClInclude Include="src\CS2\Hook\Hook_SetShaderParam.hpp" />
+    <ClInclude Include="src\CS2\Hook\Hook_SetPostProcessVec.hpp" />
+    <ClInclude Include="src\CS2\Hook\Hook_ServiceRead.hpp" />
+    <ClInclude Include="src\CS2\Hook\Hook_OverrideView.hpp" />
+    <ClInclude Include="src\CS2\Hook\Hook_FrameStageNotify.hpp" />
+    <ClInclude Include="src\CS2\Hook\Hook_IsLoadoutAllowed.hpp" />
+    <ClInclude Include="src\CS2\Hook\Hook_EnableCursor.hpp" />
+    <ClInclude Include="src\CS2\Hook\Hook_IsRelativeMouseMode.hpp" />
+    <ClInclude Include="src\CS2\Hook\Hook_MouseInputEnabled.hpp" />
+    <ClInclude Include="src\CS2\Hook\Hook_OnClientOutput.hpp" />
+    <ClInclude Include="src\CS2\Hook\Hook_ParseMessage.hpp" />
+    <ClInclude Include="src\CS2\Hook\Hook_Present.hpp" />
+    <ClInclude Include="src\CS2\Hook\Hook_ProcessSubTickInput.hpp" />
+    <ClInclude Include="src\CS2\Hook\Hook_ResizeBuffers.hpp" />
+    <ClInclude Include="src\CS2\Protobuf\base_gcmessages.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\clientmessages.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\connectionless_netmessages.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\cstrike15_gcmessages.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\cstrike15_usermessages.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\cs_gameevents.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\cs_prediction_events.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\cs_usercmd.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\c_peer2peer_netmessages.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\demo.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\econ_gcmessages.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\engine_gcmessages.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\enums_clientserver.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\fatdemo.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\gameevents.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\gcsdk_gcmessages.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\gcsystemmsgs.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\netmessages.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\networkbasetypes.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\networksystem_protomessages.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\network_connection.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\prediction_events.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\source2_steam_stats.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\steamdatagram_messages_auth.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\steamdatagram_messages_sdr.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\steammessages.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\steammessages_cloud.steamworkssdk.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\steammessages_gamenetworkingui.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\steammessages_helprequest.steamworkssdk.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\steammessages_oauth.steamworkssdk.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\steammessages_player.steamworkssdk.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\steammessages_publishedfile.steamworkssdk.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\steammessages_unified_base.steamworkssdk.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\steamnetworkingsockets_messages.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\steamnetworkingsockets_messages_certs.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\steamnetworkingsockets_messages_udp.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\te.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\uifontfile_format.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\usercmd.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\usermessages.pb.h" />
+    <ClInclude Include="src\CS2\Protobuf\valveextensions.pb.h" />
+    <ClInclude Include="src\CS2\SDK\AppFramework\IAppSystem.hpp" />
+    <ClInclude Include="src\CS2\SDK\CFunctionList.hpp" />
+    <ClInclude Include="src\CS2\SDK\CSchemaOffset.hpp" />
+    <ClInclude Include="src\CS2\SDK\Cstrike15\CCSInventoryManager.hpp" />
+    <ClInclude Include="src\CS2\SDK\Cstrike15\CCSPlayerInventory.hpp" />
+    <ClInclude Include="src\CS2\SDK\Econ\CEconItem.hpp" />
+    <ClInclude Include="src\CS2\SDK\Econ\CEconItemDefinition.hpp" />
+    <ClInclude Include="src\CS2\SDK\Econ\CEconItemSchema.hpp" />
+    <ClInclude Include="src\CS2\SDK\Econ\CEconItemSystem.hpp" />
+    <ClInclude Include="src\CS2\SDK\FunctionListSDK.hpp" />
+    <ClInclude Include="src\CS2\SDK\GCSDK\CGCClientSharedObjectCache.hpp" />
+    <ClInclude Include="src\CS2\SDK\GCSDK\CGCClientSharedObjectTypeCache.hpp" />
+    <ClInclude Include="src\CS2\SDK\GCSDK\GCSDKTypes\EconItemConstants.hpp" />
+    <ClInclude Include="src\CS2\SDK\GCSDK\GCSDKTypes\ESOCacheEvent.hpp" />
+    <ClInclude Include="src\CS2\SDK\GCSDK\GCSDKTypes\SOID_t.hpp" />
+    <ClInclude Include="src\CS2\SDK\Interface\CGameEntitySystem.hpp" />
+    <ClInclude Include="src\CS2\SDK\Interface\CInputSystem.hpp" />
+    <ClInclude Include="src\CS2\SDK\Interface\CLocalize.hpp" />
+    <ClInclude Include="src\CS2\SDK\Interface\CMaterialSystem2.hpp" />
+    <ClInclude Include="src\CS2\SDK\Interface\CShemaSystemSDK.hpp" />
+    <ClInclude Include="src\CS2\SDK\Interface\CSoundOpSystem.hpp" />
+    <ClInclude Include="src\CS2\SDK\Interface\CSource2Client.hpp" />
+    <ClInclude Include="src\CS2\SDK\Interface\IBaseFileSystem.hpp" />
+    <ClInclude Include="src\CS2\SDK\Interface\IEngineCvar.hpp" />
+    <ClInclude Include="src\CS2\SDK\Interface\IEngineToClient.hpp" />
+    <ClInclude Include="src\CS2\SDK\Interface\IGameEvent.hpp" />
+    <ClInclude Include="src\CS2\SDK\Interface\Interface.hpp" />
+    <ClInclude Include="src\CS2\SDK\Math\Math.hpp" />
+    <ClInclude Include="src\CS2\SDK\Math\Matrix.hpp" />
+    <ClInclude Include="src\CS2\SDK\Math\QAngle.hpp" />
+    <ClInclude Include="src\CS2\SDK\Math\Rect_t.hpp" />
+    <ClInclude Include="src\CS2\SDK\Math\Vector2.hpp" />
+    <ClInclude Include="src\CS2\SDK\Math\Vector3.hpp" />
+    <ClInclude Include="src\CS2\SDK\Math\Vector4.hpp" />
+    <ClInclude Include="src\CS2\SDK\Network\CNetworkMessages.hpp" />
+    <ClInclude Include="src\CS2\SDK\SDK.hpp" />
+    <ClInclude Include="src\CS2\SDK\TIER0\TIER0_Functions.hpp" />
+    <ClInclude Include="src\CS2\SDK\Types\CBaseTypes.hpp" />
+    <ClInclude Include="src\CS2\SDK\Types\CEntityData.hpp" />
+    <ClInclude Include="src\CS2\SDK\Types\CHandle.hpp" />
+    <ClInclude Include="src\CS2\SDK\Types\Color.hpp" />
+    <ClInclude Include="src\CS2\SDK\Types\CStrongHandle.hpp" />
+    <ClInclude Include="src\CS2\SDK\Types\CUtlFixedMemory.hpp" />
+    <ClInclude Include="src\CS2\SDK\Types\CUtlMap.hpp" />
+    <ClInclude Include="src\CS2\SDK\Types\CUtlMemory.hpp" />
+    <ClInclude Include="src\CS2\SDK\Types\CUtlString.hpp" />
+    <ClInclude Include="src\CS2\SDK\Types\CUtlStringToken.hpp" />
+    <ClInclude Include="src\CS2\SDK\Types\CUtlSymbol.hpp" />
+    <ClInclude Include="src\CS2\SDK\Types\CUtlSymbolLarge.hpp" />
+    <ClInclude Include="src\CS2\SDK\Types\CUtlVector.hpp" />
+    <ClInclude Include="src\CS2\SDK\Types\TIer0Memory.hpp" />
+    <ClInclude Include="src\CS2\SDK\Update\CCSGOInput.hpp" />
+    <ClInclude Include="src\CS2\SDK\Update\CGlobalVarsBase.hpp" />
+    <ClInclude Include="src\CS2\SDK\Update\CUserCmd.hpp" />
+    <ClInclude Include="src\CS2\SDK\Update\GameTrace.hpp" />
+    <ClInclude Include="src\CS2\SDK\Update\Offsets.hpp" />
+    <ClInclude Include="src\CS2\SDK\Update\VMT_Index.hpp" />
+    <ClInclude Include="src\DllLauncher.hpp" />
+    <ClInclude Include="src\DllMain.hpp" />
+    <ClInclude Include="src\GameClient\CL_Bypass.hpp" />
+    <ClInclude Include="src\GameClient\CL_ItemDefinition.hpp" />
+    <ClInclude Include="src\GameClient\CL_Players.hpp" />
+    <ClInclude Include="src\GameClient\CL_Trace.hpp" />
+    <ClInclude Include="src\GameClient\CL_Weapons.hpp" />
+  <ClInclude Include="src\PluginSenseClient\GUI\framework_w\animations\animations.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\framework\config_system\config_system.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\framework\context\context.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\framework\gui\base_element\base_element.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\framework\gui\button\button.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\framework\gui\checkbox\checkbox.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\framework\gui\child\child.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\framework\gui\colorpicker\colorpicker.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\framework\gui\dropdown\dropdown.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\framework\gui\interactive_preview\interactive_preview.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\framework\gui\keybind\keybind.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\framework\gui\listbox\listbox.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\framework\gui\multibox\multibox.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\framework\gui\popup\popup.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\framework\gui\search\search.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\framework\gui\slider\slider.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\framework\gui\tab\tab.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\framework\gui\text\text.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\framework\gui\textinput\textinput.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\framework\gui\widgets\widgets.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\framework\gui\window\window.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\framework\menu.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\includes.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\math\math.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\render\blur_engine\blur_engine.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\render\fonts\bg.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\render\fonts\fa.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\render\fonts\fa6.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\render\fonts\weapon_icon_map.hpp" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\render\fonts\sf_pro.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\render\fonts\sf_pro_bold.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\render\render.hh" /><ClInclude Include="src\PluginSenseClient\GUI\framework_w\render\stb\stb_image.hh" /></ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
+
+

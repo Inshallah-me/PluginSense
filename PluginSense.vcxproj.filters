@@ -1,0 +1,1080 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="PluginSense">
+      <UniqueIdentifier>{bf9ebf80-5529-4a5e-b8d1-29e39050994d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\GameClient">
+      <UniqueIdentifier>{a1ebe744-533b-4926-935a-4ffba0889408}</UniqueIdentifier>
+    </Filter>
+      <UniqueIdentifier>{a5576b69-d2cc-475c-ad7c-954942983000}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\CS2">
+      <UniqueIdentifier>{e1cae381-63cd-4466-9554-51be6d256e4f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\CS2\Hook">
+      <UniqueIdentifier>{8f0965d1-64ab-4cd9-94b4-8db59ec036ad}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\CS2\Protobuf">
+      <UniqueIdentifier>{abc36d35-85de-4f39-b2a3-66253e473054}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\CS2\SDK">
+      <UniqueIdentifier>{ebd09833-a36c-4838-b88c-ec97f9830d4d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\CS2\SDK\Cstrike15">
+      <UniqueIdentifier>{14502772-5c8b-4a02-9194-1c232e67019d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\CS2\SDK\Econ">
+      <UniqueIdentifier>{a0feac47-5a76-4fd3-97e9-7e7f8ed8bc88}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\CS2\SDK\GCSDK">
+      <UniqueIdentifier>{80b374bf-1d20-40de-8f3f-9591d2d8f097}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\CS2\SDK\GCSDK\GCSDKTypes">
+      <UniqueIdentifier>{feae13bf-a69c-4cd8-8b66-f8cb056b2865}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\CS2\SDK\AppFramework">
+      <UniqueIdentifier>{bba9ef2d-52d0-4dd0-92ef-a68279c37196}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\CS2\SDK\Interface">
+      <UniqueIdentifier>{22340330-c41f-4601-911b-a94126fcd996}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\CS2\SDK\Math">
+      <UniqueIdentifier>{388f6b16-07ef-43bc-8207-7f3d83c098c1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\CS2\SDK\Network">
+      <UniqueIdentifier>{dc83ce5a-afb3-4bd5-9d3d-bc7c3ba24ded}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\CS2\SDK\TIER0">
+      <UniqueIdentifier>{9bfd9cfc-1264-4ec5-b4e4-2274157c34b4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\CS2\SDK\Types">
+      <UniqueIdentifier>{ed50ceca-db45-4dca-8e98-8174bbfffe11}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\CS2\SDK\Update">
+      <UniqueIdentifier>{537adcb2-aae8-45c2-bca2-2771b93a0869}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Common">
+      <UniqueIdentifier>{09550319-2967-4021-8a94-c45be2e9ca06}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Common\Include">
+      <UniqueIdentifier>{0ae9517c-4b20-44f9-b0e1-43133bf8ae6c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Common\Helpers">
+      <UniqueIdentifier>{34546bc8-9794-420e-a704-365af3ad3349}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Common\Include\ImGui">
+      <UniqueIdentifier>{b7f7ffac-5cfe-4b39-a173-c1cf89b6651c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Common\Include\ImGui\Misc">
+      <UniqueIdentifier>{730a7fcb-4fe4-46ac-bae4-ae6c4ddf2cd5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Common\Include\ImGui\Misc\freetype">
+      <UniqueIdentifier>{657445b7-774b-4bcf-8f82-36477d1b0688}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Common\Include\rapidjson">
+      <UniqueIdentifier>{0da98d92-3e39-4089-a5a3-a2db7bdd3772}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Common\Include\rapidjson\msinttypes">
+      <UniqueIdentifier>{1b7189ea-8295-47dd-9c88-978e0cab718a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Common\Include\rapidjson\internal">
+      <UniqueIdentifier>{1f7fdd18-fd74-4757-9ebc-10afb6985cbd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Common\Include\rapidjson\error">
+      <UniqueIdentifier>{a51683fa-e93c-4d32-80d4-4cd68a632bcc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Common\Include\stb">
+      <UniqueIdentifier>{8a3ad67d-d55f-4adc-947b-2bc001e74c98}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Common\Include\XorStr">
+      <UniqueIdentifier>{065edd15-8f9e-440d-ab36-999f50d36115}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Common\Include\FW1FontWrapper">
+      <UniqueIdentifier>{4d09f4fb-127d-4207-a0e0-ecf06d5e2bed}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Common\Include\Fnv1a">
+      <UniqueIdentifier>{1d7ec5d9-9434-43fe-9957-4ae27a22c2d2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\PluginSenseClient">
+      <UniqueIdentifier>{b8c11515-ce15-43a5-844d-63b82aff6922}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\PluginSenseClient\Settings">
+      <UniqueIdentifier>{4e150f67-06e2-44c4-a259-39a99d5788c8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\PluginSenseClient\Render">
+      <UniqueIdentifier>{d309398f-cb6f-4d8a-b199-72e2620e312f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\PluginSenseClient\Fonts">
+      <UniqueIdentifier>{af579ea6-ff2b-45a0-8fb7-959e35af0ded}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\PluginSenseClient\GUI">
+      <UniqueIdentifier>{267a952d-c34c-4418-8247-a0734af332e2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\PluginSenseClient\Features">
+      <UniqueIdentifier>{eafcd62e-e607-498c-8634-0be5feeec9ae}</UniqueIdentifier>
+    </Filter>
+      <UniqueIdentifier>{8c1b7cf4-69bc-41fb-8a38-52d85347e1a2}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\DllLauncher.cpp">
+      <Filter>PluginSense</Filter>
+    </ClCompile>
+    <ClCompile Include="src\DllMain.cpp">
+      <Filter>PluginSense</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GameClient\CL_ItemDefinition.cpp">
+      <Filter>src\GameClient</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GameClient\CL_Players.cpp">
+      <Filter>src\GameClient</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GameClient\CL_Weapons.cpp">
+      <Filter>src\GameClient</Filter>
+    </ClCompile>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Hook\Hook_AntiTamper.cpp">
+      <Filter>src\CS2\Hook</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Hook\Hook_FireEventClientSide.cpp">
+      <Filter>src\CS2\Hook</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Hook\Hook_FrameStageNotify.cpp">
+      <Filter>src\CS2\Hook</Filter>
+    </ClCompile>
+      <Filter>src\CS2\Hook</Filter>
+    </ClCompile>
+      <Filter>src\CS2\Hook</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\base_gcmessages.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\c_peer2peer_netmessages.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\clientmessages.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\connectionless_netmessages.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\cs_gameevents.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\cs_prediction_events.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\cs_usercmd.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\cstrike15_gcmessages.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\cstrike15_usermessages.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\demo.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\econ_gcmessages.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\engine_gcmessages.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\enums_clientserver.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\fatdemo.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\gameevents.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\gcsdk_gcmessages.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\gcsystemmsgs.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\netmessages.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\network_connection.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\networkbasetypes.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\networksystem_protomessages.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\prediction_events.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\steamdatagram_messages_auth.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\steamdatagram_messages_sdr.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\steammessages.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\steammessages_cloud.steamworkssdk.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\steammessages_gamenetworkingui.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\steammessages_helprequest.steamworkssdk.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\steammessages_oauth.steamworkssdk.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\steammessages_player.steamworkssdk.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\steammessages_publishedfile.steamworkssdk.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\steammessages_unified_base.steamworkssdk.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\steamnetworkingsockets_messages.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\steamnetworkingsockets_messages_certs.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\steamnetworkingsockets_messages_udp.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\te.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\uifontfile_format.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\usercmd.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\usermessages.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\valveextensions.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\CBasePattern.cpp">
+      <Filter>src\CS2</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\CHook_Loader.cpp">
+      <Filter>src\CS2</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\CSDK_Loader.cpp">
+      <Filter>src\CS2</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\SDK\Cstrike15\CCSInventoryManager.cpp">
+      <Filter>src\CS2\SDK\Cstrike15</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\SDK\Cstrike15\CCSPlayerInventory.cpp">
+      <Filter>src\CS2\SDK\Cstrike15</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\SDK\Econ\CEconItem.cpp">
+      <Filter>src\CS2\SDK\Econ</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\SDK\Econ\CEconItemDefinition.cpp">
+      <Filter>src\CS2\SDK\Econ</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\SDK\Econ\CEconItemSchema.cpp">
+      <Filter>src\CS2\SDK\Econ</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\SDK\Econ\CEconItemSystem.cpp">
+      <Filter>src\CS2\SDK\Econ</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\SDK\GCSDK\CGCClientSharedObjectCache.cpp">
+      <Filter>src\CS2\SDK\GCSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\SDK\GCSDK\CGCClientSharedObjectTypeCache.cpp">
+      <Filter>src\CS2\SDK\GCSDK</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\SDK\Interface\IGameEvent.cpp">
+      <Filter>src\CS2\SDK\Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\SDK\Interface\Interface.cpp">
+      <Filter>src\CS2\SDK\Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\SDK\Math\Math.cpp">
+      <Filter>src\CS2\SDK\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\SDK\Math\Matrix.cpp">
+      <Filter>src\CS2\SDK\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\SDK\Math\QAngle.cpp">
+      <Filter>src\CS2\SDK\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\SDK\Math\Vector3.cpp">
+      <Filter>src\CS2\SDK\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\SDK\Math\Vector4.cpp">
+      <Filter>src\CS2\SDK\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\SDK\TIER0\TIER0_Functions.cpp">
+      <Filter>src\CS2\SDK\TIER0</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\SDK\Types\CEntityData.cpp">
+      <Filter>src\CS2\SDK\Types</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\SDK\Types\CHandle.cpp">
+      <Filter>src\CS2\SDK\Types</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\SDK\CFunctionList.cpp">
+      <Filter>src\CS2\SDK</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\SDK\CSchemaOffset.cpp">
+      <Filter>src\CS2\SDK</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\SDK\SDK.cpp">
+      <Filter>src\CS2\SDK</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Common\CrashLog.cpp">
+      <Filter>src\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Common\DevLog.cpp">
+      <Filter>src\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Common\MemoryEngine.cpp">
+      <Filter>src\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Common\Helpers\ModuleLoaderHelper.cpp">
+      <Filter>src\Common\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Common\Helpers\StringHelper.cpp">
+      <Filter>src\Common\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Common\Include\ImGui\imgui.cpp">
+      <Filter>src\Common\Include\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Common\Include\ImGui\imgui_draw.cpp">
+      <Filter>src\Common\Include\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Common\Include\ImGui\imgui_impl_dx11.cpp">
+      <Filter>src\Common\Include\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Common\Include\ImGui\imgui_impl_win32.cpp">
+      <Filter>src\Common\Include\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Common\Include\ImGui\imgui_tables.cpp">
+      <Filter>src\Common\Include\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Common\Include\ImGui\imgui_widgets.cpp">
+      <Filter>src\Common\Include\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Common\Include\ImGui\Misc\freetype\imgui_freetype.cpp">
+      <Filter>src\Common\Include\ImGui\Misc\freetype</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PluginSenseClient\CPluginSenseClient.cpp">
+      <Filter>src\PluginSenseClient</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PluginSenseClient\CPluginSenseGUI.cpp">
+      <Filter>src\PluginSenseClient</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PluginSenseClient\Settings\CSettingsJson.cpp">
+      <Filter>src\PluginSenseClient\Settings</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PluginSenseClient\Render\CRender.cpp">
+      <Filter>src\PluginSenseClient\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PluginSenseClient\Render\CRenderStackSystem.cpp">
+      <Filter>src\PluginSenseClient\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PluginSenseClient\Fonts\CFont.cpp">
+      <Filter>src\PluginSenseClient\Fonts</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PluginSenseClient\Fonts\CFontManager.cpp">
+      <Filter>src\PluginSenseClient\Fonts</Filter>
+    </ClCompile>
+      <Filter>src\CS2\Hook</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Hook\Hook_CreateMove.cpp">
+      <Filter>src\CS2\Hook</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Hook\Hook_CreateSwapChain.cpp">
+      <Filter>src\CS2\Hook</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Hook\Hook_IsRelativeMouseMode.cpp">
+      <Filter>src\CS2\Hook</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Hook\Hook_EnableCursor.cpp">
+      <Filter>src\CS2\Hook</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Hook\Hook_MouseInputEnabled.cpp">
+      <Filter>src\CS2\Hook</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Hook\Hook_OnClientOutput.cpp">
+      <Filter>src\CS2\Hook</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Hook\Hook_ParseMessage.cpp">
+      <Filter>src\CS2\Hook</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Hook\Hook_Present.cpp">
+      <Filter>src\CS2\Hook</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Hook\Hook_ResizeBuffers.cpp">
+      <Filter>src\CS2\Hook</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GameClient\CL_Bypass.cpp">
+      <Filter>src\GameClient</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PluginSenseClient\GUI\CPluginSenseMenu.cpp">
+      <Filter>src\PluginSenseClient\GUI</Filter>
+    </ClCompile>
+      <Filter>src\GameClient</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GameClient\CL_Trace.cpp">
+      <Filter>src\GameClient</Filter>
+    </ClCompile>
+      <Filter>src\GameClient</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Protobuf\source2_steam_stats.pb.cc">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CS2\Hook\Hook_IsLoadoutAllowed.cpp">
+      <Filter>src\CS2\Hook</Filter>
+    </ClCompile>
+    </ClCompile>
+      <Filter>src\CS2\Hook</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\DllLauncher.hpp">
+      <Filter>PluginSense</Filter>
+    </ClInclude>
+    <ClInclude Include="src\DllMain.hpp">
+      <Filter>PluginSense</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GameClient\CL_ItemDefinition.hpp">
+      <Filter>src\GameClient</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GameClient\CL_Players.hpp">
+      <Filter>src\GameClient</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GameClient\CL_Weapons.hpp">
+      <Filter>src\GameClient</Filter>
+    </ClInclude>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Hook\Hook_AntiTamper.hpp">
+      <Filter>src\CS2\Hook</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Hook\Hook_FireEventClientSide.hpp">
+      <Filter>src\CS2\Hook</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Hook\Hook_FrameStageNotify.hpp">
+      <Filter>src\CS2\Hook</Filter>
+    </ClInclude>
+      <Filter>src\CS2\Hook</Filter>
+    </ClInclude>
+      <Filter>src\CS2\Hook</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\base_gcmessages.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\c_peer2peer_netmessages.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\clientmessages.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\connectionless_netmessages.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\cs_gameevents.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\cs_prediction_events.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\cs_usercmd.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\cstrike15_gcmessages.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\cstrike15_usermessages.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\demo.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\econ_gcmessages.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\engine_gcmessages.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\enums_clientserver.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\fatdemo.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\gameevents.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\gcsdk_gcmessages.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\gcsystemmsgs.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\netmessages.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\network_connection.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\networkbasetypes.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\networksystem_protomessages.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\prediction_events.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\steamdatagram_messages_auth.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\steamdatagram_messages_sdr.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\steammessages.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\steammessages_cloud.steamworkssdk.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\steammessages_gamenetworkingui.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\steammessages_helprequest.steamworkssdk.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\steammessages_oauth.steamworkssdk.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\steammessages_player.steamworkssdk.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\steammessages_publishedfile.steamworkssdk.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\steammessages_unified_base.steamworkssdk.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\steamnetworkingsockets_messages.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\steamnetworkingsockets_messages_certs.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\steamnetworkingsockets_messages_udp.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\te.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\uifontfile_format.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\usercmd.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\usermessages.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\valveextensions.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\CBasePattern.hpp">
+      <Filter>src\CS2</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\CHook_Loader.hpp">
+      <Filter>src\CS2</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\CSDK_Loader.hpp">
+      <Filter>src\CS2</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Cstrike15\CCSInventoryManager.hpp">
+      <Filter>src\CS2\SDK\Cstrike15</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Cstrike15\CCSPlayerInventory.hpp">
+      <Filter>src\CS2\SDK\Cstrike15</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Econ\CEconItem.hpp">
+      <Filter>src\CS2\SDK\Econ</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Econ\CEconItemDefinition.hpp">
+      <Filter>src\CS2\SDK\Econ</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Econ\CEconItemSchema.hpp">
+      <Filter>src\CS2\SDK\Econ</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Econ\CEconItemSystem.hpp">
+      <Filter>src\CS2\SDK\Econ</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\GCSDK\CGCClientSharedObjectCache.hpp">
+      <Filter>src\CS2\SDK\GCSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\GCSDK\CGCClientSharedObjectTypeCache.hpp">
+      <Filter>src\CS2\SDK\GCSDK</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\GCSDK\GCSDKTypes\EconItemConstants.hpp">
+      <Filter>src\CS2\SDK\GCSDK\GCSDKTypes</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\GCSDK\GCSDKTypes\ESOCacheEvent.hpp">
+      <Filter>src\CS2\SDK\GCSDK\GCSDKTypes</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\GCSDK\GCSDKTypes\SOID_t.hpp">
+      <Filter>src\CS2\SDK\GCSDK\GCSDKTypes</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\AppFramework\IAppSystem.hpp">
+      <Filter>src\CS2\SDK\AppFramework</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Interface\CGameEntitySystem.hpp">
+      <Filter>src\CS2\SDK\Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Interface\CLocalize.hpp">
+      <Filter>src\CS2\SDK\Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Interface\CShemaSystemSDK.hpp">
+      <Filter>src\CS2\SDK\Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Interface\CSource2Client.hpp">
+      <Filter>src\CS2\SDK\Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Interface\IBaseFileSystem.hpp">
+      <Filter>src\CS2\SDK\Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Interface\IEngineToClient.hpp">
+      <Filter>src\CS2\SDK\Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Interface\IGameEvent.hpp">
+      <Filter>src\CS2\SDK\Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Interface\Interface.hpp">
+      <Filter>src\CS2\SDK\Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Math\Math.hpp">
+      <Filter>src\CS2\SDK\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Math\Matrix.hpp">
+      <Filter>src\CS2\SDK\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Math\QAngle.hpp">
+      <Filter>src\CS2\SDK\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Math\Rect_t.hpp">
+      <Filter>src\CS2\SDK\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Math\Vector2.hpp">
+      <Filter>src\CS2\SDK\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Math\Vector3.hpp">
+      <Filter>src\CS2\SDK\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Math\Vector4.hpp">
+      <Filter>src\CS2\SDK\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Network\CNetworkMessages.hpp">
+      <Filter>src\CS2\SDK\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\TIER0\TIER0_Functions.hpp">
+      <Filter>src\CS2\SDK\TIER0</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Types\CBaseTypes.hpp">
+      <Filter>src\CS2\SDK\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Types\CEntityData.hpp">
+      <Filter>src\CS2\SDK\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Types\CHandle.hpp">
+      <Filter>src\CS2\SDK\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Types\Color.hpp">
+      <Filter>src\CS2\SDK\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Types\CStrongHandle.hpp">
+      <Filter>src\CS2\SDK\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Types\CUtlFixedMemory.hpp">
+      <Filter>src\CS2\SDK\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Types\CUtlMap.hpp">
+      <Filter>src\CS2\SDK\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Types\CUtlMemory.hpp">
+      <Filter>src\CS2\SDK\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Types\CUtlString.hpp">
+      <Filter>src\CS2\SDK\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Types\CUtlStringToken.hpp">
+      <Filter>src\CS2\SDK\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Types\CUtlSymbol.hpp">
+      <Filter>src\CS2\SDK\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Types\CUtlSymbolLarge.hpp">
+      <Filter>src\CS2\SDK\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Types\CUtlVector.hpp">
+      <Filter>src\CS2\SDK\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Types\TIer0Memory.hpp">
+      <Filter>src\CS2\SDK\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Update\CCSGOInput.hpp">
+      <Filter>src\CS2\SDK\Update</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Update\CGlobalVarsBase.hpp">
+      <Filter>src\CS2\SDK\Update</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Update\CUserCmd.hpp">
+      <Filter>src\CS2\SDK\Update</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Update\GameTrace.hpp">
+      <Filter>src\CS2\SDK\Update</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Update\Offsets.hpp">
+      <Filter>src\CS2\SDK\Update</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\CFunctionList.hpp">
+      <Filter>src\CS2\SDK</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\CSchemaOffset.hpp">
+      <Filter>src\CS2\SDK</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\FunctionListSDK.hpp">
+      <Filter>src\CS2\SDK</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\SDK.hpp">
+      <Filter>src\CS2\SDK</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Common.hpp">
+      <Filter>src\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\CrashLog.hpp">
+      <Filter>src\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\DevLog.hpp">
+      <Filter>src\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\MemoryEngine.hpp">
+      <Filter>src\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Helpers\ModuleLoaderHelper.hpp">
+      <Filter>src\Common\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Helpers\StringHelper.hpp">
+      <Filter>src\Common\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\ImGui\imconfig.h">
+      <Filter>src\Common\Include\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\ImGui\imgui.h">
+      <Filter>src\Common\Include\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\ImGui\imgui_impl_dx11.h">
+      <Filter>src\Common\Include\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\ImGui\imgui_impl_win32.h">
+      <Filter>src\Common\Include\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\ImGui\imgui_internal.h">
+      <Filter>src\Common\Include\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\ImGui\imstb_rectpack.h">
+      <Filter>src\Common\Include\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\ImGui\imstb_textedit.h">
+      <Filter>src\Common\Include\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\ImGui\imstb_truetype.h">
+      <Filter>src\Common\Include\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\ImGui\Misc\freetype\imgui_freetype.h">
+      <Filter>src\Common\Include\ImGui\Misc\freetype</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\allocators.h">
+      <Filter>src\Common\Include\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\cursorstreamwrapper.h">
+      <Filter>src\Common\Include\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\document.h">
+      <Filter>src\Common\Include\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\encodedstream.h">
+      <Filter>src\Common\Include\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\encodings.h">
+      <Filter>src\Common\Include\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\filereadstream.h">
+      <Filter>src\Common\Include\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\filewritestream.h">
+      <Filter>src\Common\Include\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\fwd.h">
+      <Filter>src\Common\Include\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\istreamwrapper.h">
+      <Filter>src\Common\Include\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\memorybuffer.h">
+      <Filter>src\Common\Include\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\memorystream.h">
+      <Filter>src\Common\Include\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\ostreamwrapper.h">
+      <Filter>src\Common\Include\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\pointer.h">
+      <Filter>src\Common\Include\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\prettywriter.h">
+      <Filter>src\Common\Include\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\rapidjson.h">
+      <Filter>src\Common\Include\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\reader.h">
+      <Filter>src\Common\Include\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\schema.h">
+      <Filter>src\Common\Include\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\stream.h">
+      <Filter>src\Common\Include\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\stringbuffer.h">
+      <Filter>src\Common\Include\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\uri.h">
+      <Filter>src\Common\Include\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\writer.h">
+      <Filter>src\Common\Include\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\msinttypes\inttypes.h">
+      <Filter>src\Common\Include\rapidjson\msinttypes</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\msinttypes\stdint.h">
+      <Filter>src\Common\Include\rapidjson\msinttypes</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\internal\biginteger.h">
+      <Filter>src\Common\Include\rapidjson\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\internal\clzll.h">
+      <Filter>src\Common\Include\rapidjson\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\internal\diyfp.h">
+      <Filter>src\Common\Include\rapidjson\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\internal\dtoa.h">
+      <Filter>src\Common\Include\rapidjson\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\internal\ieee754.h">
+      <Filter>src\Common\Include\rapidjson\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\internal\itoa.h">
+      <Filter>src\Common\Include\rapidjson\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\internal\meta.h">
+      <Filter>src\Common\Include\rapidjson\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\internal\pow10.h">
+      <Filter>src\Common\Include\rapidjson\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\internal\regex.h">
+      <Filter>src\Common\Include\rapidjson\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\internal\stack.h">
+      <Filter>src\Common\Include\rapidjson\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\internal\strfunc.h">
+      <Filter>src\Common\Include\rapidjson\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\internal\strtod.h">
+      <Filter>src\Common\Include\rapidjson\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\internal\swap.h">
+      <Filter>src\Common\Include\rapidjson\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\error\en.h">
+      <Filter>src\Common\Include\rapidjson\error</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\rapidjson\error\error.h">
+      <Filter>src\Common\Include\rapidjson\error</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\stb\stb_image.h">
+      <Filter>src\Common\Include\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\Config.hpp">
+      <Filter>src\Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\XorStr\XorStr.hpp">
+      <Filter>src\Common\Include\XorStr</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\CFW1ColorRGBA.h">
+      <Filter>src\Common\Include\FW1FontWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\CFW1DWriteRenderTarget.h">
+      <Filter>src\Common\Include\FW1FontWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\CFW1Factory.h">
+      <Filter>src\Common\Include\FW1FontWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\CFW1FontWrapper.h">
+      <Filter>src\Common\Include\FW1FontWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\CFW1GlyphAtlas.h">
+      <Filter>src\Common\Include\FW1FontWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\CFW1GlyphProvider.h">
+      <Filter>src\Common\Include\FW1FontWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\CFW1GlyphRenderStates.h">
+      <Filter>src\Common\Include\FW1FontWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\CFW1GlyphSheet.h">
+      <Filter>src\Common\Include\FW1FontWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\CFW1GlyphVertexDrawer.h">
+      <Filter>src\Common\Include\FW1FontWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\CFW1Object.h">
+      <Filter>src\Common\Include\FW1FontWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\CFW1StateSaver.h">
+      <Filter>src\Common\Include\FW1FontWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\CFW1TextGeometry.h">
+      <Filter>src\Common\Include\FW1FontWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\CFW1TextRenderer.h">
+      <Filter>src\Common\Include\FW1FontWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\FW1CompileSettings.h">
+      <Filter>src\Common\Include\FW1FontWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\FW1FontWrapper.h">
+      <Filter>src\Common\Include\FW1FontWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\FW1FontWrapper\FW1Precompiled.h">
+      <Filter>src\Common\Include\FW1FontWrapper</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Include\Fnv1a\Hash_Fnv1a_Constexpr.hpp">
+      <Filter>src\Common\Include\Fnv1a</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PluginSenseClient\CPluginSenseClient.hpp">
+      <Filter>src\PluginSenseClient</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PluginSenseClient\CPluginSenseGUI.hpp">
+      <Filter>src\PluginSenseClient</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PluginSenseClient\Settings\CSettingsJson.hpp">
+      <Filter>src\PluginSenseClient\Settings</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PluginSenseClient\Render\CRender.hpp">
+      <Filter>src\PluginSenseClient\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PluginSenseClient\Render\CRenderStackSystem.hpp">
+      <Filter>src\PluginSenseClient\Render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PluginSenseClient\Fonts\CFont.hpp">
+      <Filter>src\PluginSenseClient\Fonts</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PluginSenseClient\Fonts\CFontManager.hpp">
+      <Filter>src\PluginSenseClient\Fonts</Filter>
+    </ClInclude>
+      <Filter>src\CS2\Hook</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Hook\Hook_CreateMove.hpp">
+      <Filter>src\CS2\Hook</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Hook\Hook_CreateSwapChain.hpp">
+      <Filter>src\CS2\Hook</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Hook\Hook_IsRelativeMouseMode.hpp">
+      <Filter>src\CS2\Hook</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Hook\Hook_EnableCursor.hpp">
+      <Filter>src\CS2\Hook</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Hook\Hook_MouseInputEnabled.hpp">
+      <Filter>src\CS2\Hook</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Hook\Hook_OnClientOutput.hpp">
+      <Filter>src\CS2\Hook</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Hook\Hook_ParseMessage.hpp">
+      <Filter>src\CS2\Hook</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Hook\Hook_Present.hpp">
+      <Filter>src\CS2\Hook</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Hook\Hook_ResizeBuffers.hpp">
+      <Filter>src\CS2\Hook</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GameClient\CL_Bypass.hpp">
+      <Filter>src\GameClient</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PluginSenseClient\GUI\CPluginSenseMenu.hpp">
+      <Filter>src\PluginSenseClient\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PluginSenseClient\Settings\Settings.hpp">
+      <Filter>src\PluginSenseClient\Settings</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Interface\CInputSystem.hpp">
+      <Filter>src\CS2\SDK\Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Interface\CMaterialSystem2.hpp">
+      <Filter>src\CS2\SDK\Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Interface\CSoundOpSystem.hpp">
+      <Filter>src\CS2\SDK\Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Interface\IEngineCvar.hpp">
+      <Filter>src\CS2\SDK\Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Common\Base64.h">
+      <Filter>src\Common</Filter>
+    </ClInclude>
+      <Filter>src\GameClient</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GameClient\CL_Trace.hpp">
+      <Filter>src\GameClient</Filter>
+    </ClInclude>
+      <Filter>src\GameClient</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\SDK\Update\VMT_Index.hpp">
+      <Filter>src\CS2\SDK\Update</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Protobuf\source2_steam_stats.pb.h">
+      <Filter>src\CS2\Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CS2\Hook\Hook_IsLoadoutAllowed.hpp">
+      <Filter>src\CS2\Hook</Filter>
+    </ClInclude>
+    </ClInclude>
+      <Filter>src\CS2\Hook</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
+
