@@ -24,11 +24,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: PluginSense-dll
-          path: bin\x64\Release\PluginSense.dll
+          path: bin/x64/Release/PluginSense.dll
 
       - name: Create Release (tag push)
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: bin\x64\Release\PluginSense.dll
+          files: bin/x64/Release/PluginSense.dll
           generate_release_notes: true
