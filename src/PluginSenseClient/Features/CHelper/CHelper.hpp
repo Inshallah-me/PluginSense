@@ -126,6 +126,10 @@ private:
 	void ReleaseAttacks();
 	void ResetLock();
 
+	// 自动走位:按 WASD 走向点位 + 到位反向刹车
+	void DriveToPoint( const LineupView& lineup , const Vector3& playerPos , const QAngle& viewAngles );
+	void SetBrakeKeys( bool on );
+
 	InputBinding ResolveBinding( InputAction action ) const;
 
 	// 渲染
@@ -142,6 +146,9 @@ private:
 
 	// 输入状态
 	OwnedControl m_Forward{};
+	OwnedControl m_Back{};
+	OwnedControl m_Left{};
+	OwnedControl m_Right{};
 	OwnedControl m_Walk{};
 	OwnedControl m_Duck{};
 	OwnedControl m_Jump{};
@@ -164,6 +171,15 @@ private:
 	float m_AimErrorX = 0.f;
 	float m_AimErrorY = 0.f;
 	std::chrono::steady_clock::time_point m_LastAimUpdate{};
+
+	// 自动走位刹车
+	bool m_Braking = false;
+	bool m_BrakeF = false;
+	bool m_BrakeB = false;
+	bool m_BrakeL = false;
+	bool m_BrakeR = false;
+	float m_BrakeSpeed = 0.f;
+	std::chrono::steady_clock::time_point m_BrakeStart{};
 
 	// 锁定
 	std::chrono::steady_clock::time_point m_LockStarted{};

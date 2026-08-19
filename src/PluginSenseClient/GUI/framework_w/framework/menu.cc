@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <string>
 #include <vector>
+#include <shellapi.h>
 
 #include <PluginSenseClient/Settings/CSettingsJson.hpp>
 #include <PluginSenseClient/Settings/MenuState.hpp>
@@ -650,6 +651,9 @@ namespace framework
 					controller->add_keybind("Menu Key", &g_menu_key)->key_only()->keyboard_only()->suppress_next_keyup();
 					controller->add_colorpicker("Menu color", &g_menu_accent);
 					controller->add_checkbox("Keybinds", &vars::menuKeybinds);
+					controller->add_button("Join Discord", []() {
+						ShellExecuteW( nullptr , L"open" , L"https://discord.gg/jqmZvefGfY" , nullptr , nullptr , SW_SHOWNORMAL );
+					});
 				});
 
 				window->build_child("Helper Beta", framework::child_width::half, full_height, [](framework::c_child* controller) {
@@ -657,6 +661,7 @@ namespace framework
 
 					controller->add_checkbox("Enabled", &menu_state::helperEnabled);
 					controller->add_keybind("Helper key", &helper::g_helper_key)->key_only()->suppress_next_keyup();
+					controller->add_checkbox("Auto move", &menu_state::autoMove);
 					controller->add_checkbox("Aim assist", &menu_state::autoAim);
 					controller->add_checkbox("Auto release", &menu_state::autoExecute);
 					controller->add_slider_int("Aim smoothing", &menu_state::aimSpeed, 1, 30);

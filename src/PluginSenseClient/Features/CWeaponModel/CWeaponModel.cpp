@@ -247,6 +247,21 @@ auto CWeaponModel::GetModelNames() -> std::vector<std::string>
 	return names;
 }
 
+auto CWeaponModel::GetWeaponModelPath( int weaponSel ) const -> const std::string&
+{
+	static const std::string kEmpty;
+	if ( weaponSel < 0 || weaponSel >= static_cast<int>( m_entries.size() ) )
+		return kEmpty;
+	return m_entries[weaponSel].szPath;
+}
+
+auto CWeaponModel::SetWeaponModelPath( int weaponSel , const std::string& path ) -> void
+{
+	if ( weaponSel < 0 || weaponSel >= static_cast<int>( m_entries.size() ) )
+		return;
+	m_entries[weaponSel].szPath = path;
+}
+
 auto CWeaponModel::SyncWeaponToModel( int weaponSel , int& modelSel ) -> void
 {
 	if ( m_entries.empty() )

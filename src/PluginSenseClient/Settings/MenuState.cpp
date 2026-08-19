@@ -82,6 +82,7 @@ namespace menu_state
 	int weaponModelModel = 0;
 
 	bool helperEnabled = false;
+	bool autoMove = true;            // 自动走向点位
 	bool autoAim = true;             // aim_assist
 	bool autoExecute = true;         // auto_release
 	int aimSpeed = 18;               // aim_smoothing

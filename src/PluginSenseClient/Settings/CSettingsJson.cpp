@@ -3,10 +3,26 @@
 
 #include "Settings.hpp"
 #include <PluginSenseClient/Settings/MenuState.hpp>
+#include <PluginSenseClient/GUI/framework_w/includes.hh>
+#include <PluginSenseClient/Features/CWeaponModel/CWeaponModel.hpp>
 
 #include <filesystem>
 #include <fstream>
 #include <cstdio>
+
+namespace helper
+{
+	extern framework::key_var_t g_helper_key;
+	extern framework::key_var_t g_move_forward;
+	extern framework::key_var_t g_move_back;
+	extern framework::key_var_t g_move_left;
+	extern framework::key_var_t g_move_right;
+	extern framework::key_var_t g_move_walk;
+	extern framework::key_var_t g_move_duck;
+	extern framework::key_var_t g_move_jump;
+	extern framework::key_var_t g_attack_key;
+	extern framework::key_var_t g_attack2_key;
+}
 
 static CSettingsJson g_CSettingsJson{};
 
@@ -40,6 +56,31 @@ auto CSettingsJson::LoadConfig( const std::string& JsonFile ) -> void
 		const auto& SettingsJson = DocumentConfig["Settings"];
 		GetIntJson( SettingsJson , "menu_key" , vars::menuKey , 1 , 255 );
 		GetBoolJson( SettingsJson , "menu_keybinds" , vars::menuKeybinds );
+		GetIntJson( SettingsJson , "helper_key" , helper::g_helper_key.key , 0 , 255 );
+		GetIntJson( SettingsJson , "move_forward" , helper::g_move_forward.key , 0 , 255 );
+		GetIntJson( SettingsJson , "move_back" , helper::g_move_back.key , 0 , 255 );
+		GetIntJson( SettingsJson , "move_left" , helper::g_move_left.key , 0 , 255 );
+		GetIntJson( SettingsJson , "move_right" , helper::g_move_right.key , 0 , 255 );
+		GetIntJson( SettingsJson , "move_walk" , helper::g_move_walk.key , 0 , 255 );
+		GetIntJson( SettingsJson , "move_crouch" , helper::g_move_duck.key , 0 , 255 );
+		GetIntJson( SettingsJson , "move_jump" , helper::g_move_jump.key , 0 , 255 );
+		GetIntJson( SettingsJson , "throw_key" , helper::g_attack_key.key , 0 , 255 );
+		GetIntJson( SettingsJson , "throw2_key" , helper::g_attack2_key.key , 0 , 255 );
+		// helper 配置
+		GetBoolJson( SettingsJson , "helper_enabled" , menu_state::helperEnabled );
+		GetBoolJson( SettingsJson , "auto_move" , menu_state::autoMove );
+		GetBoolJson( SettingsJson , "auto_aim" , menu_state::autoAim );
+		GetBoolJson( SettingsJson , "auto_execute" , menu_state::autoExecute );
+		GetIntJson( SettingsJson , "aim_speed" , menu_state::aimSpeed , 1 , 30 );
+		GetFloatJson( SettingsJson , "aim_threshold" , menu_state::aimThreshold , 0.05f , 3.f );
+		GetIntJson( SettingsJson , "lock_time_ms" , menu_state::lockTimeMs , 0 , 250 );
+		GetIntJson( SettingsJson , "draw_distance" , menu_state::drawDistance , 100 , 2000 );
+		GetIntJson( SettingsJson , "stand_distance" , menu_state::standDistance , 50 , 600 );
+		GetFloatJson( SettingsJson , "stand_radius" , menu_state::standRadius , 1.f , 100.f );
+		GetFloatJson( SettingsJson , "release_radius" , menu_state::releaseRadius , 1.f , 20.f );
+		GetFloatJson( SettingsJson , "height_tolerance" , menu_state::heightTolerance , 1.f , 32.f );
+		GetBoolJson( SettingsJson , "show_action" , menu_state::showAction );
+		GetBoolJson( SettingsJson , "show_distance" , menu_state::showDistance );
 		GetIntJson( SettingsJson , "menu_animation_speed" , vars::menuAnimSpeed , 0 , 100 );
 		GetColorJson( SettingsJson , "menu_accent" , vars::colorAccent );
 		GetIntJson( SettingsJson , "menu_outline_alpha" , style::outlineAlpha , 0 , 255 );
@@ -101,6 +142,18 @@ auto CSettingsJson::LoadConfig( const std::string& JsonFile ) -> void
 		GetIntJson( SettingsJson, "chat_count", menu_state::chatCount, 1, 16 ); GetIntJson( SettingsJson, "kill_count", menu_state::killCount, 1, 16 );
 		for (int i = 0; i < 16; ++i) { char key[32]{}; std::snprintf(key, sizeof(key), "chat_message_%d", i); GetTextJson(SettingsJson, key, menu_state::chatMessages[i], 128); std::snprintf(key, sizeof(key), "kill_message_%d", i); GetTextJson(SettingsJson, key, menu_state::killMessages[i], 128); }
 		GetBoolJson( SettingsJson, "weapon_model_enabled", menu_state::weaponModelEnabled ); GetIntJson( SettingsJson, "weapon_model_weapon", menu_state::weaponModelWeapon, 0, 256 ); GetIntJson( SettingsJson, "weapon_model_model", menu_state::weaponModelModel, 0, 2048 );
+		// 每把武器的模型路径(配置持久化)
+		{
+			const auto weaponNames = GetWeaponModel()->GetWeaponNames();
+			for ( std::size_t i = 0; i < weaponNames.size(); ++i )
+			{
+				const std::string key = "weapon_model_path_" + std::to_string( i );
+				char buf[ 256 ] = {};
+				GetTextJson( SettingsJson, key.c_str(), buf, sizeof( buf ) );
+				if ( buf[ 0 ] != '\0' )
+					GetWeaponModel()->SetWeaponModelPath( static_cast<int>( i ), buf );
+			}
+		}
 	}
 	else
 	{
@@ -132,6 +185,31 @@ auto CSettingsJson::SaveConfig( const std::string& JsonFile ) -> void
 			{
 AddIntJson( ConfigWriter , "menu_key" , vars::menuKey );
 AddBoolJson( ConfigWriter , "menu_keybinds" , vars::menuKeybinds );
+AddIntJson( ConfigWriter , "helper_key" , helper::g_helper_key.key );
+AddIntJson( ConfigWriter , "move_forward" , helper::g_move_forward.key );
+AddIntJson( ConfigWriter , "move_back" , helper::g_move_back.key );
+AddIntJson( ConfigWriter , "move_left" , helper::g_move_left.key );
+AddIntJson( ConfigWriter , "move_right" , helper::g_move_right.key );
+AddIntJson( ConfigWriter , "move_walk" , helper::g_move_walk.key );
+AddIntJson( ConfigWriter , "move_crouch" , helper::g_move_duck.key );
+AddIntJson( ConfigWriter , "move_jump" , helper::g_move_jump.key );
+AddIntJson( ConfigWriter , "throw_key" , helper::g_attack_key.key );
+AddIntJson( ConfigWriter , "throw2_key" , helper::g_attack2_key.key );
+// helper 配置
+AddBoolJson( ConfigWriter , "helper_enabled" , menu_state::helperEnabled );
+AddBoolJson( ConfigWriter , "auto_move" , menu_state::autoMove );
+AddBoolJson( ConfigWriter , "auto_aim" , menu_state::autoAim );
+AddBoolJson( ConfigWriter , "auto_execute" , menu_state::autoExecute );
+AddIntJson( ConfigWriter , "aim_speed" , menu_state::aimSpeed );
+AddFloatJson( ConfigWriter , "aim_threshold" , menu_state::aimThreshold );
+AddIntJson( ConfigWriter , "lock_time_ms" , menu_state::lockTimeMs );
+AddIntJson( ConfigWriter , "draw_distance" , menu_state::drawDistance );
+AddIntJson( ConfigWriter , "stand_distance" , menu_state::standDistance );
+AddFloatJson( ConfigWriter , "stand_radius" , menu_state::standRadius );
+AddFloatJson( ConfigWriter , "release_radius" , menu_state::releaseRadius );
+AddFloatJson( ConfigWriter , "height_tolerance" , menu_state::heightTolerance );
+AddBoolJson( ConfigWriter , "show_action" , menu_state::showAction );
+AddBoolJson( ConfigWriter , "show_distance" , menu_state::showDistance );
 AddIntJson( ConfigWriter , "menu_animation_speed" , vars::menuAnimSpeed );
 AddColorJson( ConfigWriter , "menu_accent" , vars::colorAccent );
 AddIntJson( ConfigWriter , "menu_outline_alpha" , style::outlineAlpha );
@@ -178,6 +256,15 @@ AddBoolJson(ConfigWriter, "lobby_premier", menu_state::lobbyPremier); AddIntJson
 AddBoolJson(ConfigWriter, "chat_spammer", menu_state::chatSpammer); AddBoolJson(ConfigWriter, "kill_say", menu_state::killSay); AddBoolJson(ConfigWriter, "vacnet_enabled", menu_state::vacnetEnabled); AddFloatJson(ConfigWriter, "chat_delay", menu_state::sendDelay); AddIntJson(ConfigWriter, "chat_count", menu_state::chatCount); AddIntJson(ConfigWriter, "kill_count", menu_state::killCount);
 for (int i = 0; i < 16; ++i) { char key[32]{}; std::snprintf(key, sizeof(key), "chat_message_%d", i); AddTextJson(ConfigWriter, key, menu_state::chatMessages[i]); std::snprintf(key, sizeof(key), "kill_message_%d", i); AddTextJson(ConfigWriter, key, menu_state::killMessages[i]); }
 AddBoolJson(ConfigWriter, "weapon_model_enabled", menu_state::weaponModelEnabled); AddIntJson(ConfigWriter, "weapon_model_weapon", menu_state::weaponModelWeapon); AddIntJson(ConfigWriter, "weapon_model_model", menu_state::weaponModelModel);
+// 每把武器的模型路径(配置持久化)
+{
+	const auto weaponNames = GetWeaponModel()->GetWeaponNames();
+	for ( std::size_t i = 0; i < weaponNames.size(); ++i )
+	{
+		const std::string key = "weapon_model_path_" + std::to_string( i );
+		AddTextJson( ConfigWriter, key.c_str(), GetWeaponModel()->GetWeaponModelPath( static_cast<int>( i ) ).c_str() );
+	}
+}
 
 			}
 			ConfigWriter.EndObject();

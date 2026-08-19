@@ -20,6 +20,10 @@ public:
 	auto GetWeaponIconChars() -> std::vector<std::string>; // 每把武器的图标字符(空 = 无)
 	auto GetModelNames() -> std::vector<std::string>;
 
+	// 每把武器的模型路径(空 = default),用于配置持久化
+	auto GetWeaponModelPath( int weaponSel ) const -> const std::string&;
+	auto SetWeaponModelPath( int weaponSel , const std::string& path ) -> void;
+
 	// UI 同步:切换武器时把该武器已选模型索引载入 modelSel;
 	// 选择模型时把选中模型路径写回该武器。
 	auto SyncWeaponToModel( int weaponSel , int& modelSel ) -> void;

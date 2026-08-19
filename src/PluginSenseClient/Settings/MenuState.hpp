@@ -122,6 +122,7 @@ namespace menu_state
 
 	// --- Utility tab:外部 helper 配置 ---
 	extern bool helperEnabled;       // enabled
+	extern bool autoMove;            // 自动走向点位
 	extern bool autoAim;             // aim_assist
 	extern bool autoExecute;         // auto_release
 	extern int aimSpeed;             // aim_smoothing

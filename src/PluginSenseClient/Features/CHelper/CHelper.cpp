@@ -706,10 +706,80 @@ bool CHelper::SetControl( OwnedControl& control , bool pressed )
 	return true;
 }
 
+// ============================================================================
+// 自动走位(外部注入 WASD,不写 CreateMove)
+// ============================================================================
+void CHelper::DriveToPoint( const LineupView& lineup , const Vector3& playerPos , const QAngle& viewAngles )
+{
+	// 目标方向(水平)
+	Vector3 toPoint = lineup.position - playerPos;
+	toPoint.m_z = 0.f;
+	const float dist = toPoint.Length();
+	if ( dist <= menu_state::releaseRadius )
+	{
+		ReleaseMovement( false );
+		return;
+	}
+
+	// 视角 forward(水平)
+	Vector3 forward;
+	Math::AngleVectors( QAngle{ 0.f , viewAngles.m_y , 0.f } , forward );
+	forward.m_z = 0.f;
+	const float fl = forward.Length();
+	if ( fl < 0.001f )
+		return;
+	forward.m_x /= fl;
+	forward.m_y /= fl;
+
+	// 目标相对视角的偏角(度);deg>0=左,<0=右(方向反时调 l/r)
+	const float dot = forward.m_x * toPoint.m_x + forward.m_y * toPoint.m_y;
+	const float cross = forward.m_x * toPoint.m_y - forward.m_y * toPoint.m_x;
+	const float deg = std::atan2f( cross , dot ) * 180.f / std::numbers::pi_v<float>;
+
+	const bool f = deg >= -67.5f && deg <= 67.5f;
+	const bool b = !f;
+	const bool l = deg >= 22.5f && deg <= 157.5f;
+	const bool r = deg >= -157.5f && deg <= -22.5f;
+
+	m_Forward.binding = ResolveBinding( InputAction::Forward );
+	m_Back.binding = ResolveBinding( InputAction::Back );
+	m_Left.binding = ResolveBinding( InputAction::Left );
+	m_Right.binding = ResolveBinding( InputAction::Right );
+
+	SetControl( m_Forward , f );
+	SetControl( m_Back , b );
+	SetControl( m_Left , l );
+	SetControl( m_Right , r );
+}
+
+// 到位反向刹车:W↔S, A↔D
+void CHelper::SetBrakeKeys( bool on )
+{
+	m_Forward.binding = ResolveBinding( InputAction::Forward );
+	m_Back.binding = ResolveBinding( InputAction::Back );
+	m_Left.binding = ResolveBinding( InputAction::Left );
+	m_Right.binding = ResolveBinding( InputAction::Right );
+
+	if ( on )
+	{
+		SetControl( m_Back , m_BrakeF );
+		SetControl( m_Forward , m_BrakeB );
+		SetControl( m_Right , m_BrakeL );
+		SetControl( m_Left , m_BrakeR );
+	}
+	else
+	{
+		ReleaseMovement( false );
+	}
+}
+
 void CHelper::ReleaseMovement( bool includeJump )
 {
 	if ( includeJump ) (void)SetControl( m_Jump , false );
 	(void)SetControl( m_Forward , false );
+	(void)SetControl( m_Back , false );
+	(void)SetControl( m_Left , false );
+	(void)SetControl( m_Right , false );
 	(void)SetControl( m_Walk , false );
 	(void)SetControl( m_Duck , false );
 }
@@ -748,6 +818,7 @@ void CHelper::CancelThrow( bool latch )
 	m_JumpTick = 0;
 	m_AimErrorX = m_AimErrorY = 0.f;
 	m_LastAimUpdate = {};
+	m_Braking = false;
 	ResetLock();
 	m_ActivationLatched = latch;
 }
@@ -927,6 +998,17 @@ bool CHelper::PrimeThrow( std::uint32_t tick , std::chrono::steady_clock::time_p
 
 void CHelper::FinishThrow( std::uint32_t tick )
 {
+	// 蹲投点位:先松开投掷键(投出),保留蹲姿;由 Complete 阶段延迟松蹲,避免"起来时投掷"
+	if ( m_ActiveLineup.actions & nd::action_crouch )
+	{
+		ReleaseAttacks();
+		m_ActivationLatched = true;
+		m_PhaseTick = tick;
+		m_PhaseStarted = Now();
+		m_ThrowPhase = ThrowPhase::Complete;
+		return;
+	}
+
 	const bool releaseAfter = ( m_ActiveLineup.actions & nd::action_release_movement_after_throw ) != 0;
 	if ( releaseAfter )
 	{
@@ -1073,6 +1155,13 @@ void CHelper::DriveThrow( std::uintptr_t pawn , std::uintptr_t weapon , std::uin
 		return;
 	}
 	case ThrowPhase::Complete:
+		// 蹲投点位:投掷后保持蹲姿一小段再起立,避免"起来时投掷"
+		if ( m_ActiveLineup.actions & nd::action_crouch )
+		{
+			if ( now - m_PhaseStarted >= std::chrono::milliseconds( 250 ) )
+				CancelThrow( true );
+			return;
+		}
 		if ( tick != m_PhaseTick )
 			CancelThrow( true );
 		return;
@@ -1088,11 +1177,8 @@ void CHelper::Tick()
 {
 	if ( !menu_state::helperEnabled )
 	{
-		const bool ownsInput = m_ThrowPhase != ThrowPhase::Idle
-			|| m_Forward.pressed || m_Walk.pressed || m_Duck.pressed
-			|| m_Jump.pressed || m_Attack.pressed || m_Attack2.pressed;
-		if ( ownsInput )
-			CancelThrow( false );
+		// 无条件释放所有注入键(含走位方向键),避免方向键卡住
+		CancelThrow( false );
 		m_ActivationLatched = false;
 		ResetLock();
 		return;
@@ -1101,11 +1187,11 @@ void CHelper::Tick()
 	const bool activationHeld = helper::g_helper_key.active();
 	if ( !activationHeld )
 	{
-		const bool ownsInput = m_ThrowPhase != ThrowPhase::Idle
-			|| m_Forward.pressed || m_Walk.pressed || m_Duck.pressed
-			|| m_Jump.pressed || m_Attack.pressed || m_Attack2.pressed;
-		if ( ownsInput )
-			CancelThrow( false );
+		// 无条件释放所有注入键(含走位方向键),避免松开热键后一直走
+		CancelThrow( false );
+		m_ActivationLatched = false;
+		m_AimErrorX = m_AimErrorY = 0.f;
+		ResetLock();
 		m_ActivationLatched = false;
 		m_AimErrorX = m_AimErrorY = 0.f;
 		ResetLock();
@@ -1186,12 +1272,62 @@ void CHelper::Tick()
 	if ( menu_state::autoAim )
 		AimAt( lineup , viewAngles , error );
 
+	const bool positionReady = ExecutionPositionReady( lineup , playerPos );
+
+	// 自动走位:不到位时按 WASD 走向点位,到位后反向刹车(W↔S, A↔D)
+	if ( menu_state::autoMove )
+	{
+		if ( !positionReady )
+		{
+			DriveToPoint( lineup , playerPos , viewAngles );
+			m_Braking = false;
+		}
+		else if ( !m_Braking
+			&& ( m_Forward.pressed || m_Back.pressed || m_Left.pressed || m_Right.pressed ) )
+		{
+			m_Braking = true;
+			m_BrakeStart = Now();
+			m_BrakeF = m_Forward.pressed;
+			m_BrakeB = m_Back.pressed;
+			m_BrakeL = m_Left.pressed;
+			m_BrakeR = m_Right.pressed;
+			// 记录刹车速度,用于动态刹车时长(速度越快刹越久)
+			const Vector3 bv = player->m_vecAbsVelocity();
+			m_BrakeSpeed = std::sqrtf( bv.m_x * bv.m_x + bv.m_y * bv.m_y );
+			SetControl( m_Forward , false );
+			SetControl( m_Back , false );
+			SetControl( m_Left , false );
+			SetControl( m_Right , false );
+			SetBrakeKeys( true );
+		}
+		else if ( m_Braking )
+		{
+			// 速度降到静止或动态时长到就停,避免反向刹车推过头反复走位
+			const Vector3 cv = player->m_vecAbsVelocity();
+			const float curSpeed = std::sqrtf( cv.m_x * cv.m_x + cv.m_y * cv.m_y );
+			const float brakeMs = std::clamp( m_BrakeSpeed * 0.5f , 30.f , 120.f );
+			if ( curSpeed <= 12.f
+				|| Now() - m_BrakeStart >= std::chrono::milliseconds( static_cast<int>( brakeMs ) ) )
+			{
+				ReleaseMovement( false );
+				m_Braking = false;
+			}
+			else
+			{
+				SetBrakeKeys( true );
+			}
+		}
+	}
+	else
+	{
+		ReleaseMovement( false );
+		m_Braking = false;
+	}
+
 	const Vector3 velocity = player->m_vecAbsVelocity();
 	const bool stationary = std::isfinite( velocity.m_x ) && std::isfinite( velocity.m_y ) && std::isfinite( velocity.m_z )
 		&& ( velocity.m_x * velocity.m_x + velocity.m_y * velocity.m_y ) <= 144.f
 		&& std::abs( velocity.m_z ) <= 12.f;
-
-	const bool positionReady = ExecutionPositionReady( lineup , playerPos );
 	const bool lockMatches = m_LockName == lineup.name
 		&& ( m_LockPosition - lineup.position ).LengthSquared() <= 0.01f
 		&& std::abs( m_LockPitch - lineup.pitch ) <= 0.001f
@@ -1340,7 +1476,8 @@ void CHelper::DrawMarker( ImDrawList* drawList , const LineupView& lineup , bool
 
 void CHelper::DrawStandMarker( ImDrawList* drawList , const LineupView& lineup , bool standing ) const
 {
-	const ImU32 color = standing ? IM_COL32( 110 , 235 , 140 , 245 ) : IM_COL32( 120 , 170 , 255 , 235 );
+	// 近(stand_radius 内)主题色,远(stand_distance 内)白色
+	const ImU32 color = standing ? AccentColor( 255 ) : IM_COL32( 245 , 245 , 250 , 235 );
 
 	constexpr int segments{ 28 };
 	std::vector<ImVec2> points;
@@ -1597,18 +1734,12 @@ auto CHelper::OnRender( ImDrawList* drawList , int screenW , int screenH ) -> vo
 		}
 	}
 
-	// 站圈(只显示 armed 选中的点位)
-	QAngle viewAngles;
-	if ( GetRenderCameraAngles( viewAngles ) )
+	// 站圈(参考 vesta:stand_radius 内绿,stand_distance 内蓝,更远不画)
+	for ( const auto& lineup : m_RenderScratch )
 	{
-		const int armedIndex = SelectArmed( m_RenderScratch , viewAngles );
-		if ( armedIndex >= 0 )
-		{
-			const auto& lineup = m_RenderScratch[ armedIndex ];
-			const bool inZone = lineup.distance <= menu_state::standRadius;
-			if ( inZone )
-				DrawStandMarker( drawList , lineup , true );
-		}
+		if ( lineup.distance > menu_state::standDistance )
+			continue;
+		DrawStandMarker( drawList , lineup , lineup.distance <= menu_state::standRadius );
 	}
 
 	// 描点(当前走到的点位对应的所有描点)
