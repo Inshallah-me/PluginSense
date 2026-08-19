@@ -3,7 +3,11 @@ name: Build
 on:
   push:
     branches: [ main ]
+    tags: [ 'v*' ]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -16,8 +20,15 @@ jobs:
       - name: Build Release x64
         run: msbuild PluginSense.sln -p:Configuration=Release -p:Platform=x64 -m
 
-      - name: Upload PluginSense.dll
+      - name: Upload PluginSense.dll (artifact)
         uses: actions/upload-artifact@v4
         with:
           name: PluginSense-dll
           path: bin\x64\Release\PluginSense.dll
+
+      - name: Create Release (tag push)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: bin\x64\Release\PluginSense.dll
+          generate_release_notes: true
