@@ -586,7 +586,7 @@ void c_render::setup()
 		g_font->f_icons_rs.create((void*)FA_compressed_data, (int)FA_compressed_size, 7.0f, cfg, icons_ranges, "f_icons_rs", true);
 		g_font->f_oof_arrow.create((void*)FA_compressed_data, (int)FA_compressed_size, 70.0f, cfg, icons_ranges, "f_oof_arrow", true);
 
-		static const ImWchar weapon_icons_ranges[] = { 0x3A , 0x62 , 0 };
+		static const ImWchar weapon_icons_ranges[] = { 0x25 , 0x66 , 0 };
 		g_font->f_weapon_icons.create((void*)esp_icons, (int)esp_icons_size, 14.0f, cfg, weapon_icons_ranges, "f_weapon_icons", false);
 	}
 

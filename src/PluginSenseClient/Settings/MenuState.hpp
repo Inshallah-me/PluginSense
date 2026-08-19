@@ -119,4 +119,19 @@ namespace menu_state
 		float wetnessSpeed = 0.8f;
 	};
 	extern WorldWeather worldWeather;
+
+	// --- Utility tab:外部 helper 配置 ---
+	extern bool helperEnabled;       // enabled
+	extern bool autoAim;             // aim_assist
+	extern bool autoExecute;         // auto_release
+	extern int aimSpeed;             // aim_smoothing
+	extern float aimThreshold;       // aim_threshold(度)
+	extern int lockTimeMs;           // lock_time_ms
+	extern int drawDistance;         // draw_distance
+	extern int standDistance;        // stand_distance
+	extern float standRadius;        // stand_radius
+	extern float releaseRadius;      // release_radius
+	extern float heightTolerance;    // height_tolerance
+	extern bool showAction;          // show_action
+	extern bool showDistance;        // show_distance
 }

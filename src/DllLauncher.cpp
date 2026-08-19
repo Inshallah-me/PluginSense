@@ -129,7 +129,7 @@ auto GetConfigDir() -> std::string
 	if ( s_ConfigDir.empty() )
 	{
 		char docs[MAX_PATH] = {};
-		if ( SUCCEEDED( SHGetFolderPathA( nullptr, CSIDL_PERSONAL, nullptr, SHGFP_TYPE_CURRENT, docs ) ) )
+		if ( SUCCEEDED( SHGetFolderPathA( nullptr, CSIDL_PERSONAL, nullptr, SHGFP_TYPE_DEFAULT, docs ) ) )
 			s_ConfigDir = std::string( docs ) + "\\PluginSense\\Config\\";
 	}
 	return s_ConfigDir;

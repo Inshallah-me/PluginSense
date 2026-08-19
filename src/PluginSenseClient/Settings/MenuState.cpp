@@ -80,4 +80,18 @@ namespace menu_state
 	bool weaponModelEnabled = false;
 	int weaponModelWeapon = 0;
 	int weaponModelModel = 0;
+
+	bool helperEnabled = false;
+	bool autoAim = true;             // aim_assist
+	bool autoExecute = true;         // auto_release
+	int aimSpeed = 18;               // aim_smoothing
+	float aimThreshold = 0.35f;      // aim_threshold
+	int lockTimeMs = 45;             // lock_time_ms
+	int drawDistance = 800;          // draw_distance
+	int standDistance = 220;         // stand_distance
+	float standRadius = 22.f;        // stand_radius
+	float releaseRadius = 6.f;       // release_radius
+	float heightTolerance = 8.f;     // height_tolerance
+	bool showAction = true;          // show_action
+	bool showDistance = true;        // show_distance
 }

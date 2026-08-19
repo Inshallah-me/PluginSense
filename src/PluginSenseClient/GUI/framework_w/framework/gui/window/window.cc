@@ -48,10 +48,10 @@ namespace framework
 		g_font->f_default.text(base_x + g_font->f_default.measure("Plugin").x, title_y, "Sense", g_style->m_accent.modulate(this->m_window_opacity.limit(1.0f).val()));
 		this->m_window_opacity.restore();
 
-		g_font->f_default.text(base_x + g_font->f_default.measure("PluginSense").x, title_y, " × Game", g_style->m_text.modulate(this->m_window_opacity.limit(0.6f).val()));
+		g_font->f_default.text(base_x + g_font->f_default.measure("PluginSense").x, title_y, " × Green", g_style->m_text.modulate(this->m_window_opacity.limit(0.6f).val()));
 		this->m_window_opacity.restore();
 
-		g_font->f_default.text(base_x + g_font->f_default.measure("PluginSense × Game").x, title_y, "Sense", g_style->m_accent.modulate(this->m_window_opacity.limit(1.0f).val()));
+		g_font->f_default.text(base_x + g_font->f_default.measure("PluginSense × Green").x, title_y, "Cheat", g_style->m_accent.modulate(this->m_window_opacity.limit(1.0f).val()));
 		this->m_window_opacity.restore();
 
 		this->setup_objects();

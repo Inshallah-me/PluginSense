@@ -17,6 +17,20 @@
 #define ICON_FA_VISUAL "\xef\x81\xae" // U+F06E
 #define ICON_FA_MODEL "\xef\x96\xae" // U+F5AE
 
+namespace helper
+{
+	extern framework::key_var_t g_helper_key;
+	extern framework::key_var_t g_move_forward;
+	extern framework::key_var_t g_move_back;
+	extern framework::key_var_t g_move_left;
+	extern framework::key_var_t g_move_right;
+	extern framework::key_var_t g_move_walk;
+	extern framework::key_var_t g_move_duck;
+	extern framework::key_var_t g_move_jump;
+	extern framework::key_var_t g_attack_key;
+	extern framework::key_var_t g_attack2_key;
+}
+
 namespace
 {
 	hue::c_color g_velocity_low{};
@@ -316,6 +330,7 @@ namespace framework
 					controller->create_tab(ICON_FA_VISUAL, "Visual", { });
 					controller->create_tab(ICON_FA_MODEL, "Changer", { });
 					controller->create_tab(ICON_FA_COMMENT, "Chat", { });
+					controller->create_tab(ICON_FA_BOMB, "Utility", { });
 					controller->create_tab(ICON_FA_FOLDER, "Config", { });
 					});
 				window->finish_tab_prebuild();
@@ -584,7 +599,7 @@ namespace framework
 				});
 
 				window->build_child("Settings", framework::child_width::half, full_height, [](framework::c_child* controller) {
-					controller->attach_child("Config", "", 3);
+					controller->attach_child("Config", "", 4);
 
 					controller->add_listbox("Config list", &g_config_index, g_config_items, 180)
 						->execute_stack([] { return g_config_items; });
@@ -630,11 +645,44 @@ namespace framework
 				});
 
 				window->build_child("Menu", framework::child_width::half, full_height, [](framework::c_child* controller) {
-					controller->attach_child("Config", "", 3);
+					controller->attach_child("Config", "", 4);
 
 					controller->add_keybind("Menu Key", &g_menu_key)->key_only()->keyboard_only()->suppress_next_keyup();
 					controller->add_colorpicker("Menu color", &g_menu_accent);
 					controller->add_checkbox("Keybinds", &vars::menuKeybinds);
+				});
+
+				window->build_child("Helper Beta", framework::child_width::half, full_height, [](framework::c_child* controller) {
+					controller->attach_child("Utility", "", 3);
+
+					controller->add_checkbox("Enabled", &menu_state::helperEnabled);
+					controller->add_keybind("Helper key", &helper::g_helper_key)->key_only()->suppress_next_keyup();
+					controller->add_checkbox("Aim assist", &menu_state::autoAim);
+					controller->add_checkbox("Auto release", &menu_state::autoExecute);
+					controller->add_slider_int("Aim smoothing", &menu_state::aimSpeed, 1, 30);
+					controller->add_slider_float("Aim threshold", &menu_state::aimThreshold, 0.05f, 3.f, false, L"\u00B0");
+					controller->add_slider_int("Lock time", &menu_state::lockTimeMs, 0, 250, false, L"ms");
+					controller->add_slider_int("Draw distance", &menu_state::drawDistance, 100, 2000);
+					controller->add_slider_int("Stand distance", &menu_state::standDistance, 50, 600);
+					controller->add_slider_float("Stand radius", &menu_state::standRadius, 1.f, 100.f, false, L"u");
+					controller->add_slider_float("Release radius", &menu_state::releaseRadius, 1.f, 20.f, false, L"u");
+					controller->add_slider_float("Height tolerance", &menu_state::heightTolerance, 1.f, 32.f, false, L"u");
+					controller->add_checkbox("Show action", &menu_state::showAction);
+					controller->add_checkbox("Show distance", &menu_state::showDistance);
+				});
+
+				window->build_child("Keys", framework::child_width::half, full_height, [](framework::c_child* controller) {
+					controller->attach_child("Utility", "", 3);
+
+					controller->add_keybind("Forward key", &helper::g_move_forward)->key_only();
+					controller->add_keybind("Backward key", &helper::g_move_back)->key_only();
+					controller->add_keybind("Left key", &helper::g_move_left)->key_only();
+					controller->add_keybind("Right key", &helper::g_move_right)->key_only();
+					controller->add_keybind("Walk key", &helper::g_move_walk)->key_only();
+					controller->add_keybind("Crouch key", &helper::g_move_duck)->key_only();
+					controller->add_keybind("Jump key", &helper::g_move_jump)->key_only();
+					controller->add_keybind("Throw key", &helper::g_attack_key)->key_only();
+					controller->add_keybind("Alt throw key", &helper::g_attack2_key)->key_only();
 				});
 
 				this->m_windows.push_back(window);
@@ -686,6 +734,7 @@ namespace framework
 
 		std::vector<framework::keybind_entry_t> entries;
 		add_menu_keybind(entries);
+		add_active_keybind(entries, "Helper", helper::g_helper_key);
 		this->m_widgets->keybind_manager()->update_keybinds(entries);
 		this->m_widgets->draw();
 	}
@@ -694,4 +743,22 @@ namespace framework
 	{
 		return this->m_widgets->notify();
 	}
+}
+
+// ============================================================================
+// helper 热键(外部 helper 与 UI 共享)
+// 按键绑定默认对齐 vesta/CS2 默认:W / Shift / Ctrl / Space / 左键 / 右键
+// ============================================================================
+namespace helper
+{
+	framework::key_var_t g_helper_key{}; // 默认不绑键,用户在 Keybinds 分区绑定
+	framework::key_var_t g_move_forward{ 'W' , framework::key_mode_t::hold };
+	framework::key_var_t g_move_back{ 'S' , framework::key_mode_t::hold };
+	framework::key_var_t g_move_left{ 'A' , framework::key_mode_t::hold };
+	framework::key_var_t g_move_right{ 'D' , framework::key_mode_t::hold };
+	framework::key_var_t g_move_walk{ VK_SHIFT , framework::key_mode_t::hold };
+	framework::key_var_t g_move_duck{ VK_CONTROL , framework::key_mode_t::hold };
+	framework::key_var_t g_move_jump{ VK_SPACE , framework::key_mode_t::hold };
+	framework::key_var_t g_attack_key{ VK_LBUTTON , framework::key_mode_t::hold };
+	framework::key_var_t g_attack2_key{ VK_RBUTTON , framework::key_mode_t::hold };
 }

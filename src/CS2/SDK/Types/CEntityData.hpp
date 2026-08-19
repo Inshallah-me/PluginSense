@@ -26,6 +26,7 @@ class CEconItem;
 class CEconItemDefinition;
 class CSkeletonInstance;
 class CCompositeMaterialOwner;
+class CPlayer_MovementServices;
 
 class IHandleEntity
 {
@@ -421,11 +422,20 @@ class C_BasePlayerPawn : public C_BaseModelEntity
 {
 public:
 	SCHEMA_OFFSET( "C_BasePlayerPawn" , "m_pWeaponServices" , m_pWeaponServices , CCSPlayer_WeaponServices* );
+	SCHEMA_OFFSET( "C_BasePlayerPawn" , "m_pMovementServices" , m_pMovementServices , CPlayer_MovementServices* );
+	SCHEMA_OFFSET( "C_BasePlayerPawn" , "m_flFOVSensitivityAdjust" , m_flFOVSensitivityAdjust , float32 );
 	SCHEMA_OFFSET( "C_BasePlayerPawn" , "m_pItemServices" , m_pItemServices , CCSPlayer_ItemServices* );
 	SCHEMA_OFFSET( "C_BasePlayerPawn" , "m_pObserverServices" , m_pObserverServices , CPlayer_ObserverServices* );
 	SCHEMA_OFFSET( "C_BasePlayerPawn" , "m_pCameraServices" , m_pCameraServices , CCSPlayerBase_CameraServices* );
 	SCHEMA_OFFSET( "C_BasePlayerPawn" , "m_vOldOrigin" , m_vOldOrigin , Vector3 );
 	SCHEMA_OFFSET( "C_BasePlayerPawn" , "m_hController" , m_hController , CHandle ); // CCSPlayerController
+};
+
+class CCSPlayer_MovementServices
+{
+public:
+	SCHEMA_OFFSET( "CCSPlayer_MovementServices" , "m_flDuckAmount" , m_flDuckAmount , float32 );
+	SCHEMA_OFFSET( "CCSPlayer_MovementServices" , "m_bDucked" , m_bDucked , bool );
 };
 
 class C_CSPlayerPawnBase : public C_BasePlayerPawn
@@ -449,6 +459,7 @@ class C_CSPlayerPawn : public C_CSPlayerPawnBase
 {
 public:
 	SCHEMA_OFFSET( "C_CSPlayerPawn" , "m_aimPunchCache" , m_aimPunchCache , CUtlVector< QAngle > );
+	SCHEMA_OFFSET( "C_CSPlayerPawn" , "m_bIsBuyMenuOpen" , m_bIsBuyMenuOpen , bool );
 	SCHEMA_OFFSET( "C_CSPlayerPawn" , "m_ArmorValue" , m_ArmorValue , int32 );
 	SCHEMA_OFFSET( "C_CSPlayerPawn" , "m_iShotsFired" , m_iShotsFired , int32 );
 	SCHEMA_OFFSET( "C_CSPlayerPawn" , "m_bIsDefusing" , m_bIsDefusing , bool );
@@ -554,6 +565,21 @@ public:
 class C_BaseCSGrenade : public C_CSWeaponBase
 {
 public:
+	SCHEMA_OFFSET( "C_BaseCSGrenade" , "m_bPinPulled" , m_bPinPulled , bool );
+	SCHEMA_OFFSET( "C_BaseCSGrenade" , "m_flThrowStrength" , m_flThrowStrength , float32 );
+};
+
+class C_GameRules
+{
+public:
+	SCHEMA_OFFSET( "C_GameRules" , "m_bGamePaused" , m_bGamePaused , bool );
+};
+
+class C_CSGameRules : public C_GameRules
+{
+public:
+	SCHEMA_OFFSET( "C_CSGameRules" , "m_bFreezePeriod" , m_bFreezePeriod , bool );
+	SCHEMA_OFFSET( "C_CSGameRules" , "m_bTeamIntroPeriod" , m_bTeamIntroPeriod , bool );
 };
 
 class C_BaseCSGrenadeProjectile : public C_BaseGrenade

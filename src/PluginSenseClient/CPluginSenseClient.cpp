@@ -23,6 +23,7 @@
 #include <PluginSenseClient/Features/CVacNetReveal/CVacNetReveal.hpp>
 #include <PluginSenseClient/Features/CLobbySpoof/CLobbySpoof.hpp>
 #include <PluginSenseClient/Features/CWeaponModel/CWeaponModel.hpp>
+#include <PluginSenseClient/Features/CHelper/CHelper.hpp>
 #include <PluginSenseClient/Settings/MenuState.hpp>
 #include <GameClient/CL_Players.hpp>
 #include <PluginSenseClient/GUI/framework_w/framework/menu.hh>
@@ -192,6 +193,7 @@ auto CPluginSenseClient::OnRender() -> void
 		SDK::Interfaces::EngineToClient()->GetScreenSize( w, h );
 		GetVelocityDisplay()->OnRender( ImGui::GetForegroundDrawList(), w, h );
 		GetMotionCamera()->on_render( ImGui::GetForegroundDrawList(), w, h );
+		GetHelper()->OnRender( ImGui::GetForegroundDrawList(), w, h );
 	}
 }
 
@@ -203,6 +205,8 @@ auto CPluginSenseClient::OnCreateMove( CCSGOInput* pInput , CUserCmd* pUserCmd )
 {
 	GetWorldVisuals()->on_create_move( pInput );
 	GetMotionCamera()->on_create_move( pInput );
+	GetVelocityDisplay()->OnCreateMove( pUserCmd );
+	GetHelper()->OnCreateMove( pInput );
 }
 
 auto GetPluginSenseClient() -> CPluginSenseClient*

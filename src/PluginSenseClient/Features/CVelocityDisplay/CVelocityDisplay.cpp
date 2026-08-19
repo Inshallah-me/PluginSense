@@ -6,6 +6,7 @@
 #include <ImGui/imgui.h>
 #include <CS2/SDK/SDK.hpp>
 #include <CS2/SDK/Interface/IEngineToClient.hpp>
+#include <CS2/SDK/Update/CUserCmd.hpp>
 #include <CS2/SDK/Types/CEntityData.hpp>
 #include <GameClient/CL_Players.hpp>
 #include <PluginSenseClient/Assets/FredokaOne_Regular.hpp>
@@ -28,6 +29,11 @@ static CVelocityDisplay g_CVelocityDisplay{};
 
 void CVelocityDisplay::Init()
 {
+}
+
+void CVelocityDisplay::OnCreateMove( CUserCmd* pCmd )
+{
+	m_pCmd = pCmd;
 }
 
 void CVelocityDisplay::OnFrame()
@@ -143,16 +149,16 @@ void CVelocityDisplay::OnRender( ImDrawList* drawList, int screenW, int screenH 
 
 void CVelocityDisplay::RenderKeystrokes( ImDrawList* drawList, int screenW, float topY )
 {
-	struct KeyDef { const char* label; int vk; };
+	struct KeyDef { const char* label; uint64_t flag; };
 	static constexpr KeyDef row0[] = {
-		{ "C", VK_CONTROL },
-		{ "W", 'W' },
-		{ "J", VK_SPACE },
+		{ "C", IN_DUCK },
+		{ "W", IN_FORWARD },
+		{ "J", IN_JUMP },
 	};
 	static constexpr KeyDef row1[] = {
-		{ "A", 'A' },
-		{ "S", 'S' },
-		{ "D", 'D' },
+		{ "A", IN_MOVELEFT },
+		{ "S", IN_BACK },
+		{ "D", IN_MOVERIGHT },
 	};
 
 	const float cellW = 28.f;
@@ -165,8 +171,11 @@ void CVelocityDisplay::RenderKeystrokes( ImDrawList* drawList, int screenW, floa
 	ImFont* font = vel::g_font ? vel::g_font : ImGui::GetFont();
 	const float fontSize = font->FontSize;
 
+	// 状态来源:usercmd 按钮(游戏实际处理的动作),不再读系统物理键
+	const uint64_t buttons = m_pCmd ? m_pCmd->button_states.buttonstate1 : 0;
+
 	auto drawKey = [&]( float x, float y, const KeyDef& key ) {
-		bool pressed = ( GetAsyncKeyState( key.vk ) & 0x8000 ) != 0;
+		bool pressed = ( buttons & key.flag ) != 0;
 		const char* text = pressed ? key.label : "_";
 		ImVec2 ts = font->CalcTextSizeA( fontSize, FLT_MAX, -1.f, text );
 		float tx = x + ( cellW - ts.x ) * 0.5f;
