@@ -1,6 +1,7 @@
 #include "CNameChanger.hpp"
 #include <Common/Common.hpp>
 #include <CS2/SDK/SDK.hpp>
+#include <CS2/SDK/Interface/IEngineCvar.hpp>
 #include <CS2/SDK/Interface/IEngineToClient.hpp>
 #include <CS2/SDK/Types/CEntityData.hpp>
 #include <GameClient/CL_Players.hpp>
@@ -249,6 +250,8 @@ static constexpr int kPresetCount = 22;
 // State
 // ============================================================================
 static uintptr_t g_engine2Base = 0;
+// ConVar patch 延迟到每帧重试,避免与其它作弊(SK)双注入时的初始化竞态
+static bool g_nameConVarPatched = false;
 
 static CNameChanger::Mode g_mode = CNameChanger::Mode::Disabled;
 static char g_editText[ 256 ] = "";
@@ -304,34 +307,36 @@ static bool PatchNameConVar()
 		break;
 	}
 
-	// 2) Modify flags of the already-registered 'name' convar via FindConVar + ResolveConVar
-	constexpr uintptr_t RVA_VENGINECVAR007 = 0x688B08;
-	constexpr uintptr_t RVA_RESOLVECONVAR = 0x3FE8E0;
-	constexpr int VTABLE_FINDCONVAR = 11;
-	constexpr uintptr_t OFF_CONVARFLAGS = 0x30;
+	// 2) Modify flags of the already-registered 'name' convar
+	// 用 SDK 接口替代硬编码 RVA(engine2+0x688B08 / 0x3FE8E0),
+	// 避免双注入时 ResolveConVar 的竞态崩溃
 	constexpr int FCVAR_DEVELOPMENTONLY = 0x2;
 	constexpr int FCVAR_USERINFO = 0x400;
 
-	uintptr_t vEngine = *(uintptr_t*)( g_engine2Base + RVA_VENGINECVAR007 );
-	if ( !vEngine || vEngine < 0x10000 ) return false;
+	auto* pCvar = SDK::Interfaces::EngineCvar();
+	if ( !pCvar ) return false;
 
-	using FindFn = void*( __fastcall* )( void*, void*, const char*, int );
-	auto findFn = (FindFn)( *(uintptr_t*)( *(uintptr_t*)vEngine + VTABLE_FINDCONVAR * 8 ) );
-	void* outHandle = nullptr;
-	findFn( (void*)vEngine, &outHandle, "name", 0 );
-	if ( !outHandle ) return false;
+	auto* pNameConVar = pCvar->Find( "name" );
+	if ( !pNameConVar ) return false;
 
-	using ResolveFn = uint64_t*( __fastcall* )( uint64_t*, int32_t, int16_t );
-	auto resolveFn = (ResolveFn)( g_engine2Base + RVA_RESOLVECONVAR );
-	uint64_t result[ 2 ] = {};
-	resolveFn( result, (int32_t)(uintptr_t)outHandle, 0 );
-	uintptr_t convar = (uintptr_t)result[ 1 ];
-	if ( !convar || convar < 0x10000 ) return false;
-
-	int32_t* flags = (int32_t*)( convar + OFF_CONVARFLAGS );
-	*flags &= ~FCVAR_DEVELOPMENTONLY;
-	*flags |= FCVAR_USERINFO;
+	pNameConVar->nFlags &= ~FCVAR_DEVELOPMENTONLY;
+	pNameConVar->nFlags |= FCVAR_USERINFO;
 	return true;
+}
+
+// SEH 防护单独抽出来(OnFrame 里有 std::string 等需展开对象,不能直接放 __try)
+static bool TryPatchNameConVar()
+{
+	bool ok = false;
+	__try
+	{
+		ok = PatchNameConVar();
+	}
+	__except ( EXCEPTION_EXECUTE_HANDLER )
+	{
+		ok = false;
+	}
+	return ok;
 }
 
 // ============================================================================
@@ -654,7 +659,7 @@ auto CNameChanger::Init() -> bool
 	g_engine2Base = (uintptr_t)GetModuleHandleW( L"engine2.dll" );
 	if ( !g_engine2Base ) return false;
 
-	PatchNameConVar();
+	// ConVar patch 延迟到 OnFrame 每帧重试(见 OnFrame),避免双注入竞态崩溃
 	g_lastFrame = std::chrono::steady_clock::now();
 	return true;
 }
@@ -678,6 +683,21 @@ auto CNameChanger::ApplyName() -> void
 
 auto CNameChanger::OnFrame() -> void
 {
+	// 延迟 + 节流重试:patch 不在 OnInit 立即做;失败后隔 1s 再试,
+	// 避免双注入竞态窗口内每帧触发异常(VEH 会在 SEH 前记录,刷爆崩溃日志)
+	if ( !g_nameConVarPatched )
+	{
+		static std::chrono::steady_clock::time_point s_lastTry{};
+		const auto nowTry = std::chrono::steady_clock::now();
+		if ( s_lastTry == std::chrono::steady_clock::time_point{}
+			|| nowTry - s_lastTry >= std::chrono::milliseconds( 1000 ) )
+		{
+			s_lastTry = nowTry;
+			if ( TryPatchNameConVar() )
+				g_nameConVarPatched = true;
+		}
+	}
+
 	SyncFromConfig();
 	auto now = std::chrono::steady_clock::now();
 	g_lastFrame = now;
