@@ -13,9 +13,7 @@
 //   GetRankData(sub_180FE34D0)         : 段位数值 + 胜场。out 低 32 位 = ranking,高 32 位 = wins。
 //                                        mode: 11 = Premier, 7 = Wingman。
 //   GetCurrentLevel(sub_180FD9690)     : 经验等级(GetFriendLevel/GetFriendXp 自己时都调用它)。
-//   GetSOCacheGameAccountClient(sub_1807FFE20) : 返回账号 GC 缓存,offset +0x30 = elevated 状态。
-//                                        GetFriendPrimeEligible / IsPrimeAccount 都通过它判断 Prime。
-//   dword_1823BF924 / dword_1823BF928  : level / xppts 全局(由 flag 0x2000 / 0x4000 门控),
+//   dword_1823C0924 / dword_1823C0928  : level / xppts 全局(由 flag 0x2000 / 0x4000 门控),
 //                                        Game::SetPlayerRanking 广播时直接读取。
 // ============================================================================
 
@@ -24,13 +22,11 @@ namespace
 	// ------------------------------------------------------------------ 类型
 	using GetRankDataFn = char( __fastcall* )( __int64 , __int64* , int );
 	using GetCurrentLevelFn = int( __fastcall* )( );
-	using GetSOCacheFn = void*( __fastcall* )( __int64 );
 	using RankByModeFn = __int64( __fastcall* )( __int64 , __int64 );
 	using WinsByModeFn = __int64( __fastcall* )( __int64 , __int64 );
 
 	static GetRankDataFn GetRankData_o = nullptr;
 	static GetCurrentLevelFn GetCurrentLevel_o = nullptr;
-	static GetSOCacheFn GetSOCache_o = nullptr;
 	static RankByModeFn RankByMode_o = nullptr;
 	static WinsByModeFn WinsByMode_o = nullptr;
 
@@ -39,8 +35,6 @@ namespace
 		"48 89 5C 24 10 44 89 44 24 18 55 57 41 57 48 8B EC 48 83 EC 60 48 8B FA";
 	static const char* kGetCurrentLevelPattern =
 		"48 83 EC 28 8B 05 ?? ?? ?? ?? C1 E8 0D A8 01 74 ?? 8B 05 ?? ?? ?? ?? 48 83 C4 28 C3";
-	static const char* kGetSOCachePattern =
-		"48 83 EC 28 48 85 C9 74 ?? BA 07 00 00 00 E8 ?? ?? ?? ?? 48 85 C0 74 ?? 83 78 08 01 75 ?? 48 8B 40 10 48 8B 00 48 83 C4 28 C3";
 
 	// PartyListAPI 自己 xuid 时读段位/胜场走这两个函数(按模式名:Competitive/Wingman/Premier)。
 	// 两个函数开头字节完全相同,只能用"返回偏移"特征码区分(rank 返回 +0x54, wins 返回 +0x58)。
@@ -50,19 +44,15 @@ namespace
 		"48 69 C1 88 00 00 00 42 8B 44 18 58 48 83 C4 60 5D C3";
 
 	// ------------------------------------------------------------------ 全局偏移(client.dll RVA)
-	// dword_1823BF880  : profile 状态 flags(bit13=level 有效, bit14=xppts 有效)
-	// dword_1823BF924  : level 值
-	// dword_1823BF928  : xppts 值
-	static constexpr uintptr_t OFF_PROFILE_FLAGS = 0x23BF880;
-	static constexpr uintptr_t OFF_LEVEL_VALUE = 0x23BF924;
-	static constexpr uintptr_t OFF_XP_VALUE = 0x23BF928;
+	// dword_1823C0880  : profile 状态 flags(bit13=level 有效, bit14=xppts 有效)
+	// dword_1823C0924  : level 值
+	// dword_1823C0928  : xppts 值
+	static constexpr uintptr_t OFF_PROFILE_FLAGS = 0x23C0880;
+	static constexpr uintptr_t OFF_LEVEL_VALUE = 0x23C0924;
+	static constexpr uintptr_t OFF_XP_VALUE = 0x23C0928;
 
 	static constexpr uint32_t FLAG_LEVEL_VALID = 0x2000;
 	static constexpr uint32_t FLAG_XP_VALID = 0x4000;
-
-	// GC 账号缓存的 elevated 状态偏移(EGameAccountElevatedState_t)
-	static constexpr uintptr_t OFF_ELEVATED_STATE = 0x30;
-	static constexpr int ELEVATED_STATE_VALUE = 5; // k_EGameAccountElevatedState_Elevated
 
 	// ------------------------------------------------------------------ 全局同步
 	// SetPlayerRanking 广播时直接读这两个全局,写全局让房间其他人也能看到伪装值。
@@ -131,34 +121,6 @@ namespace
 		return GetCurrentLevel_o();
 	}
 
-	// Prime:GetFriendPrimeEligible / IsPrimeAccount 都读账号缓存 +0x30 的 elevated 状态。
-	// 首次开启时保存原值,关闭时还原,避免 Prime 徽章残留。
-	static int g_originalElevatedState = -1;
-
-	void* __fastcall hkGetSOCache( __int64 a1 )
-	{
-		void* pResult = GetSOCache_o( a1 );
-
-		if ( pResult )
-		{
-			auto* pElevated = reinterpret_cast<int*>( (uintptr_t)pResult + OFF_ELEVATED_STATE );
-
-			if ( menu_state::spoof && menu_state::lobbyPrime )
-			{
-				if ( g_originalElevatedState == -1 )
-					g_originalElevatedState = *pElevated;
-				*pElevated = ELEVATED_STATE_VALUE;
-			}
-			else if ( g_originalElevatedState != -1 )
-			{
-				*pElevated = g_originalElevatedState;
-				g_originalElevatedState = -1;
-			}
-		}
-
-		return pResult;
-	}
-
 	// 按模式名读段位数值(sub_180FE3690)。PartyListAPI 自己 xuid 时调用,覆盖全部模式。
 	__int64 __fastcall hkRankByMode( __int64 a1 , __int64 a2 )
 	{
@@ -220,7 +182,7 @@ namespace
 	}
 
 	// 本模块安装的 hook 目标,Shutdown 时逐个禁用(不要用 MH_ALL_HOOKS 影响其他模块)。
-	inline void* g_hookTargets[5] = {};
+	inline void* g_hookTargets[4] = {};
 }
 
 static CLobbySpoof g_CLobbySpoof{};
@@ -229,26 +191,23 @@ auto CLobbySpoof::Init() -> bool
 {
 	void* pRankData = FindPattern( CLIENT_DLL , kGetRankDataPattern );
 	void* pCurrentLevel = FindPattern( CLIENT_DLL , kGetCurrentLevelPattern );
-	void* pSOCache = FindPattern( CLIENT_DLL , kGetSOCachePattern );
 	void* pRankByMode = FindEntryFromInside(
 		reinterpret_cast<uint8_t*>( FindPattern( CLIENT_DLL , kRankByModeReturnPattern ) ) );
 	void* pWinsByMode = FindEntryFromInside(
 		reinterpret_cast<uint8_t*>( FindPattern( CLIENT_DLL , kWinsByModeReturnPattern ) ) );
 
 	// 先扫描定位,全部命中才装 hook(避免半装状态)。
-	if ( !pRankData || !pCurrentLevel || !pSOCache || !pRankByMode || !pWinsByMode )
+	if ( !pRankData || !pCurrentLevel || !pRankByMode || !pWinsByMode )
 		return false;
 
 	g_hookTargets[0] = pRankData;
 	g_hookTargets[1] = pCurrentLevel;
-	g_hookTargets[2] = pSOCache;
-	g_hookTargets[3] = pRankByMode;
-	g_hookTargets[4] = pWinsByMode;
+	g_hookTargets[2] = pRankByMode;
+	g_hookTargets[3] = pWinsByMode;
 
 	bool ok = true;
 	ok &= CreateHook( pRankData , GetRankData_o , &hkGetRankData );
 	ok &= CreateHook( pCurrentLevel , GetCurrentLevel_o , &hkGetCurrentLevel );
-	ok &= CreateHook( pSOCache , GetSOCache_o , &hkGetSOCache );
 	ok &= CreateHook( pRankByMode , RankByMode_o , &hkRankByMode );
 	ok &= CreateHook( pWinsByMode , WinsByMode_o , &hkWinsByMode );
 	return ok;

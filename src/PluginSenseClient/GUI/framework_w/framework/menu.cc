@@ -40,6 +40,8 @@ namespace
 	hue::c_color g_velocity_graph{};
 	hue::c_color g_damage_body{};
 	hue::c_color g_damage_head{};
+	hue::c_color g_sparks_color{ 173, 192, 255, 255 };
+	hue::c_color g_death_effect_color{ 173, 192, 255, 255 };
 	hue::c_color g_weather_color{ 255, 255, 255, 255 };
 	hue::c_color g_crosshair_color{ 255, 255, 0, 255 };
 	hue::c_color g_menu_accent{ 157, 196, 29, 255 };
@@ -105,6 +107,8 @@ namespace
 		g_velocity_graph = to_hue(menu_state::graphColor);
 		g_damage_body = to_hue(menu_state::damageBody);
 		g_damage_head = to_hue(menu_state::damageHead);
+		g_sparks_color = to_hue(menu_state::sparksColor);
+		g_death_effect_color = to_hue(menu_state::deathEffectColor);
 		g_weather_color = to_hue(menu_state::worldWeather.color);
 		g_crosshair_color = to_hue(menu_state::worldScene.camCrosshairColor);
 
@@ -120,6 +124,8 @@ namespace
 		to_imvec4(g_velocity_graph, menu_state::graphColor);
 		to_imvec4(g_damage_body, menu_state::damageBody);
 		to_imvec4(g_damage_head, menu_state::damageHead);
+		to_imvec4(g_sparks_color, menu_state::sparksColor);
+		to_imvec4(g_death_effect_color, menu_state::deathEffectColor);
 		to_imvec4(g_weather_color, menu_state::worldWeather.color);
 		to_imvec4(g_crosshair_color, menu_state::worldScene.camCrosshairColor);
 
@@ -471,7 +477,19 @@ namespace framework
 						popup->add_slider_float("Damage time", &menu_state::damageTime, 1.f, 10.f, false, L"s");
 					});
 					damage_settings->set_inlined();
-			controller->add_checkbox("Motion Camera", &menu_state::worldScene.motionCamera);
+
+					controller->add_checkbox("Bullet sparks", &menu_state::bulletSparks);
+					auto sparks_settings = controller->add_popup("Bullet sparks", true, [](framework::c_popup* popup) {
+						popup->add_colorpicker("Spark color", &g_sparks_color);
+					});
+					sparks_settings->set_inlined();
+
+					controller->add_checkbox("Death effect", &menu_state::deathEffect);
+					auto death_settings = controller->add_popup("Death effect", true, [](framework::c_popup* popup) {
+						popup->add_colorpicker("Death color", &g_death_effect_color);
+					});
+					death_settings->set_inlined();
+				controller->add_checkbox("Motion Camera", &menu_state::worldScene.motionCamera);
 					auto cam_settings = controller->add_popup("Motion Camera", true, [](framework::c_popup* popup) {
 						popup->add_slider_float("Hor offset", &menu_state::worldScene.camHorOffset, -30.f, 30.f);
 						popup->add_slider_float("Ver offset", &menu_state::worldScene.camVerOffset, -50.f, 50.f);
@@ -487,9 +505,6 @@ namespace framework
 					cam_settings->set_inlined();
 						controller->add_checkbox("Spoof", &menu_state::spoof);
 						auto spoof_settings = controller->add_popup("Spoof", true, [](framework::c_popup* popup) {
-							// ③ 其他
-							popup->add_checkbox("VacNet Reveal", &menu_state::vacnetEnabled);
-
 							// ① 惩罚 / 状态(互斥)
 							popup->add_checkbox("Official Ban", &menu_state::officialBan)->on_change([](bool v) {
 								if (v) { menu_state::fakeCooldown = false; menu_state::vacBan = false; }
@@ -520,7 +535,6 @@ namespace framework
 							custom_days->set_callback_visibility([] { return menu_state::fakeCooldown && menu_state::fakeCooldownTime == 7; });
 
 							// ② 账号资料
-							popup->add_checkbox("Prime", &menu_state::lobbyPrime);
 							popup->add_checkbox("Premier", &menu_state::lobbyPremier);
 							auto premier_visible = [] { return menu_state::lobbyPremier; };
 							auto premier_rating = popup->add_slider_int("CS Rating", &menu_state::lobbyPremierRating, 0, 99999, false, L"");
@@ -555,7 +569,11 @@ namespace framework
 				window->build_child("Chat spammer", framework::child_width::half, full_height, [](framework::c_child* controller) {
 					controller->attach_child("Chat", "", 2);
 
-					controller->add_checkbox("Enable chat spammer", &menu_state::chatSpammer);
+					controller->add_checkbox("Enabled", &menu_state::chatSpammer);
+					auto chat_settings = controller->add_popup("Settings", true, [](framework::c_popup* popup) {
+						popup->add_checkbox("Random", &menu_state::chatSpammerRandom);
+					});
+					chat_settings->set_inlined();
 					controller->add_button("Add message", [] {
 						if (menu_state::chatCount < 16)
 							++menu_state::chatCount;
@@ -579,7 +597,11 @@ namespace framework
 				window->build_child("Kill say", framework::child_width::half, full_height, [](framework::c_child* controller) {
 					controller->attach_child("Chat", "", 2);
 
-					controller->add_checkbox("Enable kill say", &menu_state::killSay);
+					controller->add_checkbox("Enabled", &menu_state::killSay);
+					auto kill_settings = controller->add_popup("Settings", true, [](framework::c_popup* popup) {
+						popup->add_checkbox("Random", &menu_state::killSayRandom);
+					});
+					kill_settings->set_inlined();
 					controller->add_button("Add kill say", [] {
 						if (menu_state::killCount < 16)
 							++menu_state::killCount;

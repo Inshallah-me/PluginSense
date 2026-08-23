@@ -5,6 +5,7 @@
 #include <CS2/SDK/Interface/IGameEvent.hpp>
 #include <CS2/SDK/Update/CCSGOInput.hpp>
 #include <CS2/SDK/Types/CEntityData.hpp>
+#include <CS2/SDK/FunctionListSDK.hpp>
 
 #include <PluginSenseClient/GUI/CPluginSenseMenu.hpp>
 #include <PluginSenseClient/CPluginSenseGUI.hpp>
@@ -20,10 +21,11 @@
 #include <PluginSenseClient/Features/CWeather/CWeather.hpp>
 #include <PluginSenseClient/Features/CWorldVisuals/CWorldVisuals.hpp>
 #include <PluginSenseClient/Features/CMotionCamera/CMotionCamera.hpp>
-#include <PluginSenseClient/Features/CVacNetReveal/CVacNetReveal.hpp>
 #include <PluginSenseClient/Features/CLobbySpoof/CLobbySpoof.hpp>
 #include <PluginSenseClient/Features/CWeaponModel/CWeaponModel.hpp>
 #include <PluginSenseClient/Features/CHelper/CHelper.hpp>
+#include <PluginSenseClient/Features/CBulletSparks/CBulletSparks.hpp>
+#include <PluginSenseClient/Features/CDamageEffect/CDamageEffect.hpp>
 #include <PluginSenseClient/Settings/MenuState.hpp>
 #include <GameClient/CL_Players.hpp>
 #include <PluginSenseClient/GUI/framework_w/framework/menu.hh>
@@ -36,11 +38,12 @@ auto CPluginSenseClient::OnInit() -> void
 	GetFortniteDamage()->Init();
 	GetVelocityDisplay()->Init();
 		GetFakeCooldown()->Init();
-	GetWeather()->Init();
-		GetMotionCamera()->Init();
-	GetVacNetReveal()->Init();
-	GetLobbySpoof()->Init();
+		GetWeather()->Init();
+			GetMotionCamera()->Init();
+		GetLobbySpoof()->Init();
 	GetWeaponModel()->Init();
+	GetBulletSparks()->Init();
+	GetDamageEffect()->OnInit();
 }
 
 auto CPluginSenseClient::OnDestroy() -> void
@@ -78,6 +81,7 @@ auto CPluginSenseClient::OnFireEventClientSide( IGameEvent* pGameEvent ) -> void
 	// Hitlog + Fortnite damage indicator
 	if ( _strcmpi( pGameEvent->GetName(), XorStr( "player_hurt" ) ) == 0 )
 	{
+		GetDamageEffect()->OnPlayerHurt( pGameEvent );
 		GetFortniteDamage()->OnPlayerHurt( pGameEvent );
 
 		if ( menu_state::damageLogEnabled )
@@ -171,7 +175,6 @@ auto CPluginSenseClient::OnRender() -> void
 {
 	GetNameChanger()->OnFrame();
 	GetChatSpammer()->OnFrame();
-	GetVacNetReveal()->OnFrame();
 
 	if ( GetPluginSenseGUI()->IsVisible() )
 		GetPluginSenseMenu()->OnRenderMenu();

@@ -44,6 +44,11 @@ auto IGameEvent::GetInt64( const std::string_view Name ) -> int64_t
 	return ( *reinterpret_cast<Fn**>( this ) )[ 7 ]( this, key, 0 );
 }
 
+auto IGameEvent::GetFloat( const std::string_view Name , float defaultValue ) -> float
+{
+	return IGameEvent_GetFloat( this , Name.data() , defaultValue );
+}
+
 auto IGameEvent::GetPlayerController( const std::string_view Name ) -> CCSPlayerController*
 {
 	CUtlStringToken Token( Name.data() );

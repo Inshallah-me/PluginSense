@@ -57,8 +57,9 @@ namespace menu_state
 	extern ImVec4 damageBody;
 	extern ImVec4 damageHead;
 	extern bool chatSpammer;
+	extern bool chatSpammerRandom;
 	extern bool killSay;
-	extern bool vacnetEnabled;
+	extern bool killSayRandom;
 	extern float sendDelay;
 	extern int chatCount;
 	extern int killCount;
@@ -80,7 +81,6 @@ namespace menu_state
 	extern bool lobbyLevel;
 	extern int lobbyLevelValue;
 	extern int lobbyXp;
-	extern bool lobbyPrime;
 
 	struct WorldScene
 	{
@@ -135,4 +135,12 @@ namespace menu_state
 	extern float heightTolerance;    // height_tolerance
 	extern bool showAction;          // show_action
 	extern bool showDistance;        // show_distance
+
+	// --- 子弹火花(Bullet sparks)---
+	extern bool bulletSparks;
+	extern ImVec4 sparksColor;
+
+	// --- 死亡效果(Death effect)---
+	extern bool deathEffect;
+	extern ImVec4 deathEffectColor;
 }

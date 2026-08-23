@@ -55,8 +55,9 @@ namespace menu_state
 	ImVec4 damageBody = { 1.f, 1.f, 1.f, 1.f };
 	ImVec4 damageHead = { 1.f, 1.f, 0.f, 1.f };
 	bool chatSpammer = false;
+	bool chatSpammerRandom = false;
 	bool killSay = false;
-	bool vacnetEnabled = false;
+	bool killSayRandom = false;
 	float sendDelay = 1.f;
 	int chatCount = 1;
 	int killCount = 1;
@@ -72,7 +73,6 @@ namespace menu_state
 	bool lobbyLevel = false;
 	int lobbyLevelValue = 40;
 	int lobbyXp = 4999;
-	bool lobbyPrime = false;
 
 	WorldScene worldScene;
 	WorldWeather worldWeather;
@@ -95,4 +95,12 @@ namespace menu_state
 	float heightTolerance = 8.f;     // height_tolerance
 	bool showAction = true;          // show_action
 	bool showDistance = true;        // show_distance
+
+	// --- 子弹火花(Bullet sparks)---
+	bool bulletSparks = false;
+	ImVec4 sparksColor = { 0.68f, 0.75f, 1.0f, 1.0f }; // 淡蓝白
+
+	// --- 死亡效果(Death effect)---
+	bool deathEffect = false;
+	ImVec4 deathEffectColor = { 0.68f, 0.75f, 1.0f, 1.0f }; // 淡蓝白
 }

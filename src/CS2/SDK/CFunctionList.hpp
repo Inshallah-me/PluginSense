@@ -85,6 +85,7 @@ public:
 	CBasePattern CEconItem_SetDynamicAttributeValueUint = { VmpStr( "CEconItem::SetDynamicAttributeValueUint" ) , VmpStr( "E9 ? ? ? ? CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC 49 8B C0 48 8B CA 48 8B D0" ) , CLIENT_DLL , 0 , SEARCH_TYPE_CALL };
 	CBasePattern IGameEvent_GetName = { VmpStr( "IGameEvent::GetName" ) , VmpStr( "8B 41 14 0F BA E0 1E 73 05 48 8D 41 18 C3" ) , CLIENT_DLL , 0 , SEARCH_TYPE_NONE };
 	CBasePattern IGameEvent_GetInt64 = { VmpStr( "IGameEvent::GetInt64" ) , VmpStr( "48 89 5C 24 ? 48 89 6C 24 ? 48 89 74 24 ? 57 48 83 EC ? 48 8B 01 41 8B F0" ) , CLIENT_DLL , 0 , SEARCH_TYPE_NONE };
+	CBasePattern IGameEvent_GetFloat = { VmpStr( "IGameEvent::GetFloat" ) , VmpStr( "E8 ? ? ? ? 0F 28 D8 89 5C 24 20" ) , CLIENT_DLL , 0 , SEARCH_TYPE_CALL };
 	CBasePattern IGameEvent_GetPlayerController = { VmpStr( "IGameEvent::GetPlayerController" ) , VmpStr( "48 83 EC 38 8B 02 4C 8D 44 24 20" ) , CLIENT_DLL , 0 , SEARCH_TYPE_NONE };
 	CBasePattern IGameEvent_GetString = { VmpStr( "IGameEvent::GetString" ) , VmpStr( "48 83 EC 38 8B 02 48 83 C1 58 89 44 24 20 8B 42 04 89 44 24 24 48 8B 42 08 48 8D 54 24 20 48 89 44 24 28 E8 ? ? ? ? 48 83 C4 38 C3 CC CC CC 33 C9" ) , CLIENT_DLL , 0 , SEARCH_TYPE_NONE };
 	CBasePattern IGameEvent_SetString = { VmpStr( "IGameEvent::SetString" ) , VmpStr( "48 83 EC 38 8B 02 48 83 C1 58 89 44 24 20 41 B1 1A" ) , CLIENT_DLL , 0 , SEARCH_TYPE_NONE };
@@ -145,6 +146,7 @@ public:
 	// Particle system functions
 	CBasePattern ParticleCreateEffect = { VmpStr( "ParticleCreateEffect" ) , VmpStr( "4C 8B DC 53 48 81 EC 90 00 00 00 F2 0F 10 05" ) , CLIENT_DLL , 0 , SEARCH_TYPE_NONE };
 	CBasePattern ParticleSetControlPoint = { VmpStr( "ParticleSetControlPoint" ) , VmpStr( "48 83 EC 58 F3 41 0F 10 51 04 F3 41 0F 10 09 F3 41 0F 10 59 08" ) , CLIENT_DLL , 0 , SEARCH_TYPE_NONE };
+	CBasePattern ParticleSetEntityBinding = { VmpStr( "ParticleSetEntityBinding" ) , VmpStr( "41 54 41 55 41 57 48 81 EC 90 00 00 00 4D 8B F9" ) , CLIENT_DLL , 0 , SEARCH_TYPE_NONE };
 	CBasePattern ParticleSetTransform = { VmpStr( "ParticleSetTransform" ) , VmpStr( "48 89 5C 24 ? 48 89 6C 24 ? 48 89 74 24 ? 57 48 83 EC 40 48 8B F9 49 8B E9" ) , CLIENT_DLL , 0 , SEARCH_TYPE_NONE };
 	CBasePattern ParticleDestroyEffect = { VmpStr( "ParticleDestroyEffect" ) , VmpStr( "83 FA FF 0F 84 ? ? ? ? 41 54" ) , CLIENT_DLL , 0 , SEARCH_TYPE_NONE };
 	CBasePattern InitParticlePathBuffer = { VmpStr( "InitParticlePathBuffer" ) , VmpStr( "48 89 5C 24 ? 57 48 83 EC ? 8B 41 ? 48 8D 79" ) , CLIENT_DLL , 0 , SEARCH_TYPE_NONE };
