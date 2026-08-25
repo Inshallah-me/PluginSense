@@ -34,6 +34,7 @@ static SigEntry g_Sigs[] =
 	{ XorStr( "SetShaderParam" ) , CLIENT_DLL , XorStr( "E8 ? ? ? ? 0F B6 43 25" ) , 0 , SEARCH_TYPE_CALL } ,
 	{ XorStr( "SetShaderParamI" ) , CLIENT_DLL , XorStr( "48 89 6C 24 ? 48 89 74 24 ? 57 48 83 EC 20 66 0F 6E CA 41 8B F0" ) } ,
 	{ XorStr( "SetPostProcessVec" ) , ENGINE2_DLL , XorStr( "E8 ? ? ? ? 44 0F 28 94 24" ) , 0 , SEARCH_TYPE_CALL } ,
+	{ XorStr( "AnalizePeModule" ) , CLIENT_DLL , XorStr( "48 8B C4 55 41 56 48 8D 68 ? 48 81 EC ? ? ? ? 48 89 58 ? 0F 57 C0" ) } ,
 };
 
 auto SIG( const char* name ) -> CBasePattern

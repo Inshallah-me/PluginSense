@@ -135,13 +135,14 @@ public:
 	CBasePattern GetCUserCmdArray = { VmpStr( "GetCUserCmdArray" ) , VmpStr( "48 89 4C 24 ? 41 56 41 57" ) , CLIENT_DLL , 0 , SEARCH_TYPE_NONE };
 	CBasePattern GetCUserCmdBySequenceNumber = { VmpStr( "GetCUserCmdBySequenceNumber" ) , VmpStr( "40 53 48 83 EC ? 8B DA E8 ? ? ? ? 4C 8B C0" ) , CLIENT_DLL , 0 , SEARCH_TYPE_NONE };
 	CBasePattern CEconItem_SerializeToProtoBufItem = { VmpStr( "CEconItem::SerializeToProtoBufItem" ) , VmpStr( "40 55 56 48 83 EC ? 48 8B 41 ? 48 8B F2" ) , CLIENT_DLL , 0 , SEARCH_TYPE_NONE };
-	CBasePattern CUIEngineSource2_RunScript = { VmpStr( "CUIEngineSource2::RunScript" ) , VmpStr( "48 89 5C 24 ? 4C 89 4C 24 ? 4C 89 44 24 ? 55 56 57 41 54 41 55 41 56 41 57 48 8D 6C 24" ) , PANORAMA_DLL , 0 , SEARCH_TYPE_NONE };
+	CBasePattern CUIEngineSource2_RunScript = { VmpStr( "CUIEngineSource2::RunScript" ) , VmpStr( "4C 89 4C 24 ? 4C 89 44 24 ? 48 89 54 24 ? 55 53 56 57 41 54 41 56" ) , PANORAMA_DLL , 0 , SEARCH_TYPE_NONE };
 	CBasePattern CTraceFilter_Constructor = { VmpStr( "CTraceFilter::Constructor" ) , VmpStr( "48 89 5C 24 ? 48 89 74 24 ? 57 48 83 EC ? 0F B6 41 ? 33 FF 24" ) , CLIENT_DLL , 0 , SEARCH_TYPE_NONE };
 	CBasePattern CCSGO_HudWeaponSelection_ClearHudWeaponIcon = { VmpStr( "CCSGO_HudWeaponSelection::ClearHudWeaponIcon" ) , VmpStr( "E8 ? ? ? ? 8B F8 C6 84 24" ) , CLIENT_DLL , 0 , SEARCH_TYPE_CALL };
 	CBasePattern C_BaseEntity_GetHitBoxSet = { VmpStr( "C_BaseEntity::GetHitBoxSet" ) , VmpStr( "48 89 5C 24 ? 48 89 74 24 ? 57 48 81 EC ? ? ? ? 8B DA 48 8B F9 E8 ? ? ? ? 48 8B F0" ) , CLIENT_DLL , 0 , SEARCH_TYPE_NONE };
 	CBasePattern C_BaseEntity_UpdateBodyGroupChoice = { VmpStr( "C_BaseEntity::UpdateBodyGroupChoice" ) , VmpStr( "E8 ? ? ? ? 48 8B 9C 24 ? ? ? ? 4C 8B B4 24 ? ? ? ? 48 83 C4" ) , CLIENT_DLL , 0 , SEARCH_TYPE_CALL };
 	CBasePattern C_EconItemView_SetAttributeValueByName = { VmpStr( "C_EconItemView::SetAttributeValueByName" ) , VmpStr( "E8 ? ? ? ? 66 41 0F 6E D4" ) , CLIENT_DLL , 0 , SEARCH_TYPE_CALL };
 	CBasePattern C_CSWeaponBase_UpdateCompositeMaterialSet = { VmpStr( "C_CSWeaponBase::UpdateCompositeMaterialSet" ) , VmpStr( "40 55 53 41 57 48 8D AC 24 00 FE ? ?" ) , CLIENT_DLL , 0 , SEARCH_TYPE_NONE };
+	CBasePattern AnalizePeModule = { VmpStr( "AnalizePeModule" ) , VmpStr( "48 8B C4 55 41 56 48 8D 68 ? 48 81 EC ? ? ? ? 48 89 58 ? 0F 57 C0" ) , CLIENT_DLL , 0 , SEARCH_TYPE_NONE };
 
 	// Particle system functions
 	CBasePattern ParticleCreateEffect = { VmpStr( "ParticleCreateEffect" ) , VmpStr( "4C 8B DC 53 48 81 EC 90 00 00 00 F2 0F 10 05" ) , CLIENT_DLL , 0 , SEARCH_TYPE_NONE };

@@ -1,5 +1,6 @@
 #include "CHook_Loader.hpp"
 
+#include <DllLauncher.hpp>
 #include <Common/MemoryEngine.hpp>
 #include <MinHook/MinHook.h>
 
@@ -45,6 +46,7 @@ auto CHook_Loader::InstallSecondHook() -> bool
 {
 	m_Hooks =
 	{
+		{ SIG( XorStr( "AnalizePeModule" ) ) , &Hook_AnalizePeModule , reinterpret_cast<LPVOID*>( &AnalizePeModule_o ) } ,
 		{ SIG( XorStr( "PresentOverlay" ) ) , &Hook_Present , reinterpret_cast<LPVOID*>( &Present_o ) } ,
 		{ SIG( XorStr( "ResizeBuffers" ) ) , &Hook_ResizeBuffers , reinterpret_cast<LPVOID*>( &ResizeBuffers_o ) } ,
 		{ SIG( XorStr( "CreateSwapChain" ) ) , &Hook_CreateSwapChain , reinterpret_cast<LPVOID*>( &CreateSwapChain_o ) } ,

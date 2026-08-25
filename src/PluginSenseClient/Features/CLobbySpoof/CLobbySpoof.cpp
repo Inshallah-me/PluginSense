@@ -10,10 +10,10 @@
 // 大厅资料伪装(C++ 原生 hook)
 //
 // 数据源(已在 client.dll 当前版本验证,2026-08):
-//   GetRankData(sub_180FE34D0)         : 段位数值 + 胜场。out 低 32 位 = ranking,高 32 位 = wins。
+//   GetRankData(sub_180FF8B40)         : 段位数值 + 胜场。out 低 32 位 = ranking,高 32 位 = wins。
 //                                        mode: 11 = Premier, 7 = Wingman。
-//   GetCurrentLevel(sub_180FD9690)     : 经验等级(GetFriendLevel/GetFriendXp 自己时都调用它)。
-//   dword_1823C0924 / dword_1823C0928  : level / xppts 全局(由 flag 0x2000 / 0x4000 门控),
+//   GetCurrentLevel(sub_180FEED00)     : 经验等级(GetFriendLevel/GetFriendXp 自己时都调用它)。
+//   dword_1823DDA84 / dword_1823DDA88  : level / xppts 全局(由 flag 0x2000 / 0x4000 门控),
 //                                        Game::SetPlayerRanking 广播时直接读取。
 // ============================================================================
 
@@ -43,13 +43,13 @@ namespace
 	static const char* kWinsByModeReturnPattern =
 		"48 69 C1 88 00 00 00 42 8B 44 18 58 48 83 C4 60 5D C3";
 
-	// ------------------------------------------------------------------ 全局偏移(client.dll RVA)
-	// dword_1823C0880  : profile 状态 flags(bit13=level 有效, bit14=xppts 有效)
-	// dword_1823C0924  : level 值
-	// dword_1823C0928  : xppts 值
-	static constexpr uintptr_t OFF_PROFILE_FLAGS = 0x23C0880;
-	static constexpr uintptr_t OFF_LEVEL_VALUE = 0x23C0924;
-	static constexpr uintptr_t OFF_XP_VALUE = 0x23C0928;
+	// ------------------------------------------------------------------ 全局偏移(client.dll RVA,2026-08-25 更新,IDA 实测)
+	// dword_1823DD9E0  : profile 状态 flags(bit13=level 有效, bit14=xppts 有效)
+	// dword_1823DDA84  : level 值
+	// dword_1823DDA88  : xppts 值
+	static constexpr uintptr_t OFF_PROFILE_FLAGS = 0x23DD9E0;
+	static constexpr uintptr_t OFF_LEVEL_VALUE = 0x23DDA84;
+	static constexpr uintptr_t OFF_XP_VALUE = 0x23DDA88;
 
 	static constexpr uint32_t FLAG_LEVEL_VALID = 0x2000;
 	static constexpr uint32_t FLAG_XP_VALID = 0x4000;
@@ -165,17 +165,43 @@ namespace
 		return MH_EnableHook( pTarget ) == MH_OK;
 	}
 
-	// 特征码命中"函数内部某点",从这里往回扫描找函数入口(prologue: push rbp; mov rbp, rsp)。
+	// 特征码命中"函数内部某点",从这里往回扫描找函数入口。
+	// 新版 prologue 可能带"保存寄存器"前缀(mov [rsp+18h], r14 等),找到 push rbp; mov rbp, rsp 后继续往前跳过。
 	uint8_t* FindEntryFromInside( uint8_t* pInside )
 	{
-		if ( !pInside )
-			return nullptr;
-
 		for ( int i = 1; i < 0x400; ++i )
 		{
 			if ( pInside[-i] == 0x55 && pInside[-i + 1] == 0x48
 				&& pInside[-i + 2] == 0x8B && pInside[-i + 3] == 0xEC )
-				return pInside - i;
+			{
+				uint8_t* pEntry = pInside - i;
+
+				// 跳过函数入口前的"保存寄存器" prologue,如:
+				//   mov [rsp+18h], r14  = 4C 89 74 24 18
+				//   mov [rsp+10h], rbx  = 48 89 5C 24 10
+				//   mov [rsp+10h], rsi  = 48 89 74 24 10
+				//   mov [rsp+10h], rdi  = 48 89 7C 24 10
+				while ( pEntry >= pInside - 0x400 )
+				{
+					if ( pEntry[-5] == 0x4C && pEntry[-4] == 0x89 &&
+						 ( pEntry[-3] == 0x74 || pEntry[-3] == 0x7C ) && pEntry[-2] == 0x24 )
+					{
+						pEntry -= 5;
+						continue;
+					}
+
+					if ( pEntry[-5] == 0x48 && pEntry[-4] == 0x89 &&
+						 ( pEntry[-3] == 0x5C || pEntry[-3] == 0x74 || pEntry[-3] == 0x7C ) && pEntry[-2] == 0x24 )
+					{
+						pEntry -= 5;
+						continue;
+					}
+
+					break;
+				}
+
+				return pEntry;
+			}
 		}
 
 		return nullptr;
