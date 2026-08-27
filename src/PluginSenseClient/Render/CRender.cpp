@@ -192,6 +192,12 @@ auto CRender::DrawImage( ID3D11ShaderResourceView* pD3D11ShaderResourceView , co
 	ImGui::GetBackgroundDrawList()->AddImage( reinterpret_cast<ImTextureID>( pD3D11ShaderResourceView ) , ImVec2( x , y ) , ImVec2( x + w , y + h ) );
 }
 
+auto CRender::GetHudDrawList() -> ImDrawList*
+{
+	// HUD 统一画背景层,与菜单同层;菜单最后绘制,保证在最顶层
+	return ImGui::GetBackgroundDrawList();
+}
+
 auto GetRender() -> CRender*
 {
 	return &g_CRender;

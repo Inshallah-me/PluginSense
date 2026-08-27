@@ -47,8 +47,6 @@ auto Hook_ServiceRead( std::uintptr_t a1 ) -> std::uintptr_t
 			particle_data = resources::particles::weather::stars;
 		else if ( filename.find( "sparks" ) != std::string::npos )
 			particle_data = resources::particles::effects::sparks;
-		else if ( filename.find( "fade" ) != std::string::npos )
-			particle_data = resources::particles::effects::fade;
 
 		if ( !particle_data.empty() )
 		{

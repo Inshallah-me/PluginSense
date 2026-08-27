@@ -43,13 +43,13 @@ namespace
 	static const char* kWinsByModeReturnPattern =
 		"48 69 C1 88 00 00 00 42 8B 44 18 58 48 83 C4 60 5D C3";
 
-	// ------------------------------------------------------------------ 全局偏移(client.dll RVA,2026-08-25 更新,IDA 实测)
-	// dword_1823DD9E0  : profile 状态 flags(bit13=level 有效, bit14=xppts 有效)
-	// dword_1823DDA84  : level 值
-	// dword_1823DDA88  : xppts 值
-	static constexpr uintptr_t OFF_PROFILE_FLAGS = 0x23DD9E0;
-	static constexpr uintptr_t OFF_LEVEL_VALUE = 0x23DDA84;
-	static constexpr uintptr_t OFF_XP_VALUE = 0x23DDA88;
+	// ------------------------------------------------------------------ 全局偏移(client.dll RVA,2026-08-27 更新,IDA 实测)
+	// dword_1823DC9E0 : profile 状态 flags(bit13=level 有效, bit14=xppts 有效)
+	// dword_1823DCA84  : level 值
+	// dword_1823DCA88  : xppts 值
+	static constexpr uintptr_t OFF_PROFILE_FLAGS = 0x23DC9E0;
+	static constexpr uintptr_t OFF_LEVEL_VALUE = 0x23DCA84;
+	static constexpr uintptr_t OFF_XP_VALUE = 0x23DCA88;
 
 	static constexpr uint32_t FLAG_LEVEL_VALID = 0x2000;
 	static constexpr uint32_t FLAG_XP_VALID = 0x4000;

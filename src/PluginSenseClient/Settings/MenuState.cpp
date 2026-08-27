@@ -99,8 +99,4 @@ namespace menu_state
 	// --- 子弹火花(Bullet sparks)---
 	bool bulletSparks = false;
 	ImVec4 sparksColor = { 0.68f, 0.75f, 1.0f, 1.0f }; // 淡蓝白
-
-	// --- 死亡效果(Death effect)---
-	bool deathEffect = false;
-	ImVec4 deathEffectColor = { 0.68f, 0.75f, 1.0f, 1.0f }; // 淡蓝白
 }

@@ -12,6 +12,8 @@
 #include <PluginSenseClient/Settings/Settings.hpp>
 #include <PluginSenseClient/Features/CNameChanger/CNameChanger.hpp>
 #include <PluginSenseClient/Features/CWeaponModel/CWeaponModel.hpp>
+#include <PluginSenseClient/Features/CHelper/CHelper.hpp>
+#include <PluginSenseClient/Features/CHelper/CHelperRecorder.hpp>
 
 #define half_height 255
 #define full_height 525
@@ -21,6 +23,7 @@
 namespace helper
 {
 	extern framework::key_var_t g_helper_key;
+	extern framework::key_var_t g_record_key;
 	extern framework::key_var_t g_move_forward;
 	extern framework::key_var_t g_move_back;
 	extern framework::key_var_t g_move_left;
@@ -41,7 +44,6 @@ namespace
 	hue::c_color g_damage_body{};
 	hue::c_color g_damage_head{};
 	hue::c_color g_sparks_color{ 173, 192, 255, 255 };
-	hue::c_color g_death_effect_color{ 173, 192, 255, 255 };
 	hue::c_color g_weather_color{ 255, 255, 255, 255 };
 	hue::c_color g_crosshair_color{ 255, 255, 0, 255 };
 	hue::c_color g_menu_accent{ 157, 196, 29, 255 };
@@ -55,6 +57,38 @@ namespace
 	int g_config_index{};
 	bool g_text_cache_ready{};
 	framework::key_var_t g_menu_key{};
+
+	// Keys & Recorder 分区:页面切换(0=Keys 1=Recorder)
+	int g_helper_page{ 0 };
+
+	// Helper Recorder 面板:当前地图录制点位列表状态
+	int g_recorder_index{};
+	std::vector<std::string> g_recorder_items{ "Empty" };
+	// 列表来源:0=我的点位 1=内置点位
+	int g_recorder_source{ 0 };
+	// 内置点位类型筛选:0=All 1=Smoke 2=Flash 3=Molotov 4=HE 5=Decoy
+	int g_recorder_kind_filter{ 0 };
+
+	// 录制新点位使用的名字(Record key 下方输入框)
+	std::string g_recorder_new_name{};
+
+	// 点位编辑缓冲(选中列表项后载入,Save 后写回)
+	int g_recorder_edit_index{ -1 };
+	// 上次载入时的来源/类型筛选快照(切换 Source/Kind 时强制重新载入)
+	int g_recorder_edit_source{ -1 };
+	int g_recorder_edit_kind{ -1 };
+	// 当前选中项对应的原始索引(用户点位=列表原始下标;内置=内置原始索引)
+	int g_recorder_edit_original{ -1 };
+	// 列表当前是否有有效选中项(Empty/无选中时隐藏编辑区)
+	bool g_recorder_has_valid{ false };
+	std::string g_recorder_edit_name{};
+	int g_recorder_edit_run_ticks{ 0 };
+	int g_recorder_edit_after_jump{ 0 };
+	int g_recorder_edit_strength{ 0 }; // 0=满力 1=双键 2=轻抛
+	bool g_recorder_edit_crouch{ false };
+	bool g_recorder_edit_jump{ false };
+	bool g_recorder_edit_walk{ false };
+	bool g_recorder_edit_hidden{ false }; // 内置点位隐藏(勾选后 Save 即隐藏)
 
 	hue::c_color to_hue(const ImVec4& color)
 	{
@@ -108,7 +142,6 @@ namespace
 		g_damage_body = to_hue(menu_state::damageBody);
 		g_damage_head = to_hue(menu_state::damageHead);
 		g_sparks_color = to_hue(menu_state::sparksColor);
-		g_death_effect_color = to_hue(menu_state::deathEffectColor);
 		g_weather_color = to_hue(menu_state::worldWeather.color);
 		g_crosshair_color = to_hue(menu_state::worldScene.camCrosshairColor);
 
@@ -125,7 +158,6 @@ namespace
 		to_imvec4(g_damage_body, menu_state::damageBody);
 		to_imvec4(g_damage_head, menu_state::damageHead);
 		to_imvec4(g_sparks_color, menu_state::sparksColor);
-		to_imvec4(g_death_effect_color, menu_state::deathEffectColor);
 		to_imvec4(g_weather_color, menu_state::worldWeather.color);
 		to_imvec4(g_crosshair_color, menu_state::worldScene.camCrosshairColor);
 
@@ -484,11 +516,6 @@ namespace framework
 					});
 					sparks_settings->set_inlined();
 
-					controller->add_checkbox("Death effect", &menu_state::deathEffect);
-					auto death_settings = controller->add_popup("Death effect", true, [](framework::c_popup* popup) {
-						popup->add_colorpicker("Death color", &g_death_effect_color);
-					});
-					death_settings->set_inlined();
 				controller->add_checkbox("Motion Camera", &menu_state::worldScene.motionCamera);
 					auto cam_settings = controller->add_popup("Motion Camera", true, [](framework::c_popup* popup) {
 						popup->add_slider_float("Hor offset", &menu_state::worldScene.camHorOffset, -30.f, 30.f);
@@ -698,18 +725,184 @@ namespace framework
 					controller->add_checkbox("Show distance", &menu_state::showDistance);
 				});
 
-				window->build_child("Keys", framework::child_width::half, full_height, [](framework::c_child* controller) {
+				window->build_child("Keys & Recorder", framework::child_width::half, full_height, [](framework::c_child* controller) {
 					controller->attach_child("Utility", "", 3);
 
-					controller->add_keybind("Forward key", &helper::g_move_forward)->key_only();
-					controller->add_keybind("Backward key", &helper::g_move_back)->key_only();
-					controller->add_keybind("Left key", &helper::g_move_left)->key_only();
-					controller->add_keybind("Right key", &helper::g_move_right)->key_only();
-					controller->add_keybind("Walk key", &helper::g_move_walk)->key_only();
-					controller->add_keybind("Crouch key", &helper::g_move_duck)->key_only();
-					controller->add_keybind("Jump key", &helper::g_move_jump)->key_only();
-					controller->add_keybind("Throw key", &helper::g_attack_key)->key_only();
-					controller->add_keybind("Alt throw key", &helper::g_attack2_key)->key_only();
+					// 页面切换:Keys / Recorder(默认 Keys)
+					controller->add_dropdown("Page", &g_helper_page, { "Keys", "Recorder" });
+
+					// ---- Keys 页:移动/投掷键位绑定 ----
+					controller->add_keybind("Forward key", &helper::g_move_forward)->key_only()->set_callback_visibility([] { return g_helper_page == 0; });
+					controller->add_keybind("Backward key", &helper::g_move_back)->key_only()->set_callback_visibility([] { return g_helper_page == 0; });
+					controller->add_keybind("Left key", &helper::g_move_left)->key_only()->set_callback_visibility([] { return g_helper_page == 0; });
+					controller->add_keybind("Right key", &helper::g_move_right)->key_only()->set_callback_visibility([] { return g_helper_page == 0; });
+					controller->add_keybind("Walk key", &helper::g_move_walk)->key_only()->set_callback_visibility([] { return g_helper_page == 0; });
+					controller->add_keybind("Crouch key", &helper::g_move_duck)->key_only()->set_callback_visibility([] { return g_helper_page == 0; });
+					controller->add_keybind("Jump key", &helper::g_move_jump)->key_only()->set_callback_visibility([] { return g_helper_page == 0; });
+					controller->add_keybind("Throw key", &helper::g_attack_key)->key_only()->set_callback_visibility([] { return g_helper_page == 0; });
+					controller->add_keybind("Alt throw key", &helper::g_attack2_key)->key_only()->set_callback_visibility([] { return g_helper_page == 0; });
+
+					// ---- Recorder 页:录制 + 点位列表/编辑 ----
+					// 录制(toggle):按下开始录制会话,再按一下保存;会话记录移动/跳投/蹲姿/力度
+					controller->add_keybind("Record key", &helper::g_record_key)->suppress_next_keyup()->set_callback_visibility([] { return g_helper_page == 1; });
+
+					// 新点位名字:录制保存时用这个名字(留空则自动 Custom N)
+					controller->add_input_box("New name", &g_recorder_new_name)->set_callback_visibility([] { return g_helper_page == 1; });
+
+					// 列表来源:我的点位 / 内置点位(内置可编辑,保存为覆盖)
+					controller->add_dropdown("Source", &g_recorder_source, { "My lineups", "Builtin" })->set_callback_visibility([] { return g_helper_page == 1; });
+
+					// 点位类型筛选(我的点位 / 内置点位都可用)
+					controller->add_dropdown("Kind", &g_recorder_kind_filter, { "All", "Smoke", "Flash", "Molotov", "HE", "Decoy" })
+						->set_callback_visibility([] { return g_helper_page == 1; });
+
+					// 当前地图点位列表(索引对齐列表顺序)
+					{
+						auto lineup_list = controller->add_listbox("Lineups", &g_recorder_index, g_recorder_items, 120);
+						lineup_list->set_callback_visibility([] { return g_helper_page == 1; });
+						lineup_list->execute_stack([]() {
+							// 新名字同步给录制器(录制保存时读取)
+							GetHelper()->SetRecordName(g_recorder_new_name);
+							// 类型筛选(0=All → 0xff,否则映射 nd::kind)
+							const std::uint8_t kindFilter = g_recorder_kind_filter == 0 ? 0xff
+								: static_cast<std::uint8_t>(g_recorder_kind_filter - 1);
+							// 选中项/来源/筛选任一变化时,重新把点位数据载入编辑缓冲
+							if (g_recorder_edit_index != g_recorder_index
+								|| g_recorder_edit_source != g_recorder_source
+								|| g_recorder_edit_kind != g_recorder_kind_filter)
+							{
+								UserLineup lu;
+								bool ok = false;
+								if (g_recorder_source == 1)
+								{
+									ok = GetHelper()->GetBuiltinItem(g_recorder_index, kindFilter, lu);
+									if (ok) g_recorder_edit_original = lu.override_builtin_index;
+								}
+								else
+								{
+									const int orig = GetHelper()->GetRecorderIndexAt(g_recorder_index, kindFilter);
+									g_recorder_edit_original = orig;
+									ok = orig >= 0 && GetHelper()->GetRecorderItem(orig, lu);
+								}
+								if (ok)
+								{
+									g_recorder_edit_index = g_recorder_index;
+									g_recorder_edit_source = g_recorder_source;
+									g_recorder_edit_kind = g_recorder_kind_filter;
+									g_recorder_edit_name = lu.name;
+									g_recorder_edit_run_ticks = lu.run_ticks;
+									g_recorder_edit_after_jump = lu.after_jump_ticks;
+									g_recorder_edit_strength = lu.throw_strength >= 0.75f ? 0
+										: (lu.throw_strength >= 0.25f ? 1 : 2);
+									g_recorder_edit_crouch = (lu.actions & resources::nades::action_crouch) != 0;
+									g_recorder_edit_jump = (lu.actions & resources::nades::action_jump) != 0;
+									g_recorder_edit_walk = (lu.actions & resources::nades::action_walk) != 0;
+									g_recorder_edit_hidden = lu.hidden;
+								}
+								else
+									g_recorder_edit_index = -1;
+							}
+							// 列表是否有有效选中项(Empty/空列表时隐藏编辑区)
+							g_recorder_has_valid = g_recorder_edit_index >= 0
+								&& g_recorder_edit_index == g_recorder_index;
+							return g_recorder_source == 1
+								? GetHelper()->BuildBuiltinItems(kindFilter)
+								: GetHelper()->BuildRecorderItems(kindFilter);
+						});
+					}
+
+					// ---- 点位编辑(选中后修改参数,Save 写回 JSON;无有效选中时隐藏)----
+					controller->add_input_box("Name", &g_recorder_edit_name)->set_callback_visibility([] { return g_helper_page == 1 && g_recorder_has_valid; });
+					controller->add_slider_int("Run ticks", &g_recorder_edit_run_ticks, 0, 250, false, L"t")->set_callback_visibility([] { return g_helper_page == 1 && g_recorder_has_valid; });
+					controller->add_slider_int("After jump", &g_recorder_edit_after_jump, 0, 32, false, L"t")->set_callback_visibility([] { return g_helper_page == 1 && g_recorder_has_valid; });
+					controller->add_dropdown("Strength", &g_recorder_edit_strength, { "Left (full)", "Both (mid)", "Right (soft)" })->set_callback_visibility([] { return g_helper_page == 1 && g_recorder_has_valid; });
+					controller->add_checkbox("Crouch", &g_recorder_edit_crouch)->set_callback_visibility([] { return g_helper_page == 1 && g_recorder_has_valid; });
+					controller->add_checkbox("Jump", &g_recorder_edit_jump)->set_callback_visibility([] { return g_helper_page == 1 && g_recorder_has_valid; });
+					controller->add_checkbox("Walk", &g_recorder_edit_walk)->set_callback_visibility([] { return g_helper_page == 1 && g_recorder_has_valid; });
+					// 隐藏点位:两种来源都可用;勾选后 Save 即隐藏(不显示不参与)
+					controller->add_checkbox("Hide", &g_recorder_edit_hidden)
+						->set_callback_visibility([] { return g_helper_page == 1 && g_recorder_has_valid; });
+					{
+						auto teleport_btn = controller->add_button("Teleport", []() {
+							if (g_recorder_edit_index != g_recorder_index) return;
+							UserLineup lu;
+							bool ok = false;
+							if (g_recorder_source == 1)
+							{
+								const std::uint8_t kindFilter = g_recorder_kind_filter == 0 ? 0xff
+									: static_cast<std::uint8_t>(g_recorder_kind_filter - 1);
+								ok = GetHelper()->GetBuiltinItem(g_recorder_index, kindFilter, lu);
+							}
+							else
+								ok = g_recorder_edit_original >= 0
+									&& GetHelper()->GetRecorderItem(g_recorder_edit_original, lu);
+							if (ok)
+								GetHelper()->TeleportTo(lu);
+						});
+						teleport_btn->set_callback_visibility([] { return g_helper_page == 1 && g_recorder_has_valid; });
+					}
+					{
+						auto save_btn = controller->add_button("Save", []() {
+							if (g_recorder_edit_index != g_recorder_index) return;
+							UserLineup lu;
+							bool ok = false;
+							if (g_recorder_source == 1)
+							{
+								const std::uint8_t kindFilter = g_recorder_kind_filter == 0 ? 0xff
+									: static_cast<std::uint8_t>(g_recorder_kind_filter - 1);
+								ok = GetHelper()->GetBuiltinItem(g_recorder_index, kindFilter, lu);
+							}
+							else
+								ok = g_recorder_edit_original >= 0
+									&& GetHelper()->GetRecorderItem(g_recorder_edit_original, lu);
+							if (!ok) return;
+							lu.name = g_recorder_edit_name;
+							lu.run_ticks = static_cast<std::uint16_t>(std::max(0, g_recorder_edit_run_ticks));
+							lu.after_jump_ticks = static_cast<std::uint8_t>(std::max(0, g_recorder_edit_after_jump));
+							lu.throw_strength = g_recorder_edit_strength == 0 ? 1.f
+								: (g_recorder_edit_strength == 1 ? 0.5f : 0.f);
+							lu.actions = 0;
+							if (g_recorder_edit_crouch) lu.actions |= resources::nades::action_crouch;
+							if (lu.run_ticks > 0) lu.actions |= resources::nades::action_run;
+							if (g_recorder_edit_walk && lu.run_ticks > 0) lu.actions |= resources::nades::action_walk;
+							if (g_recorder_edit_jump) lu.actions |= resources::nades::action_jump;
+							// 同步重建动作标签,列表/执行处显示与 actions 一致
+							lu.action = CHelperRecorder::BuildActionLabel(lu.actions);
+							if (g_recorder_source == 1)
+							{
+								// 内置点位:保存为覆盖条目(替代内置原条目;勾选 Hide 则隐藏)
+								// lu.override_builtin_index 在载入时已设为内置原始索引
+								const int builtinIndex = lu.override_builtin_index;
+								lu.override_builtin_index = builtinIndex;
+								lu.hidden = g_recorder_edit_hidden;
+								GetHelper()->SaveBuiltinOverride(builtinIndex, lu);
+							}
+							else
+							{
+								lu.hidden = g_recorder_edit_hidden;
+								GetHelper()->UpdateRecorderItem(g_recorder_edit_original, lu);
+							}
+						});
+						save_btn->set_callback_visibility([] { return g_helper_page == 1 && g_recorder_has_valid; });
+					}
+
+					{
+						auto remove_btn = controller->add_button("Remove", []() {
+							if (g_recorder_source == 1)
+							{
+								// 恢复内置原样:按原始内置索引删除覆盖条目
+								if (g_recorder_edit_original >= 0)
+									GetHelper()->RemoveBuiltinOverride(g_recorder_edit_original);
+							}
+							else if (g_recorder_edit_original >= 0)
+								GetHelper()->RemoveRecorderItem(g_recorder_edit_original);
+							g_recorder_edit_index = -1;
+							g_recorder_edit_source = -1;
+							g_recorder_edit_kind = -1;
+						});
+						remove_btn->set_inlined();
+						remove_btn->set_callback_visibility([] { return g_helper_page == 1 && g_recorder_has_valid; });
+					}
 				});
 
 				this->m_windows.push_back(window);
@@ -762,6 +955,7 @@ namespace framework
 		std::vector<framework::keybind_entry_t> entries;
 		add_menu_keybind(entries);
 		add_active_keybind(entries, "Helper", helper::g_helper_key);
+		add_active_keybind(entries, "Recorder", helper::g_record_key);
 		this->m_widgets->keybind_manager()->update_keybinds(entries);
 		this->m_widgets->draw();
 	}
@@ -779,6 +973,7 @@ namespace framework
 namespace helper
 {
 	framework::key_var_t g_helper_key{}; // 默认不绑键,用户在 Keybinds 分区绑定
+	framework::key_var_t g_record_key{ 0 , framework::key_mode_t::toggle }; // 录制键默认 Toggle:按下开始,再按保存
 	framework::key_var_t g_move_forward{ 'W' , framework::key_mode_t::hold };
 	framework::key_var_t g_move_back{ 'S' , framework::key_mode_t::hold };
 	framework::key_var_t g_move_left{ 'A' , framework::key_mode_t::hold };

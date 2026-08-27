@@ -13,6 +13,7 @@
 namespace helper
 {
 	extern framework::key_var_t g_helper_key;
+	extern framework::key_var_t g_record_key;
 	extern framework::key_var_t g_move_forward;
 	extern framework::key_var_t g_move_back;
 	extern framework::key_var_t g_move_left;
@@ -57,6 +58,7 @@ auto CSettingsJson::LoadConfig( const std::string& JsonFile ) -> void
 		GetIntJson( SettingsJson , "menu_key" , vars::menuKey , 1 , 255 );
 		GetBoolJson( SettingsJson , "menu_keybinds" , vars::menuKeybinds );
 		GetIntJson( SettingsJson , "helper_key" , helper::g_helper_key.key , 0 , 255 );
+		GetIntJson( SettingsJson , "record_key" , helper::g_record_key.key , 0 , 255 );
 		GetIntJson( SettingsJson , "move_forward" , helper::g_move_forward.key , 0 , 255 );
 		GetIntJson( SettingsJson , "move_back" , helper::g_move_back.key , 0 , 255 );
 		GetIntJson( SettingsJson , "move_left" , helper::g_move_left.key , 0 , 255 );
@@ -185,6 +187,7 @@ auto CSettingsJson::SaveConfig( const std::string& JsonFile ) -> void
 AddIntJson( ConfigWriter , "menu_key" , vars::menuKey );
 AddBoolJson( ConfigWriter , "menu_keybinds" , vars::menuKeybinds );
 AddIntJson( ConfigWriter , "helper_key" , helper::g_helper_key.key );
+AddIntJson( ConfigWriter , "record_key" , helper::g_record_key.key );
 AddIntJson( ConfigWriter , "move_forward" , helper::g_move_forward.key );
 AddIntJson( ConfigWriter , "move_back" , helper::g_move_back.key );
 AddIntJson( ConfigWriter , "move_left" , helper::g_move_left.key );

@@ -139,8 +139,4 @@ namespace menu_state
 	// --- 子弹火花(Bullet sparks)---
 	extern bool bulletSparks;
 	extern ImVec4 sparksColor;
-
-	// --- 死亡效果(Death effect)---
-	extern bool deathEffect;
-	extern ImVec4 deathEffectColor;
 }

@@ -1,4 +1,5 @@
 #include "CHelper.hpp"
+#include "CHelperRecorder.hpp"
 
 #include <cmath>
 #include <algorithm>
@@ -176,6 +177,28 @@ namespace
 	{
 		auto* gv = SDK::Pointers::GlobalVarsBase();
 		return gv ? static_cast<std::uint32_t>( gv->m_nTickCount() ) : 0u;
+	}
+
+	// 执行控制台命令(经 InputService,与 CNameChanger::RunCommand 同机制)
+	void RunConsoleCommand( const char* cmd )
+	{
+		static void* s_input = nullptr;
+		static void( __fastcall** s_exec )( void*, int, const char*, int ) = nullptr;
+		if ( !s_input )
+		{
+			HMODULE eng = GetModuleHandleW( L"engine2.dll" );
+			if ( !eng )
+				return;
+			auto create = ( void* ( __cdecl* )( const char*, int* ) )GetProcAddress( eng , "CreateInterface" );
+			s_input = create ? create( "InputService_001" , nullptr ) : nullptr;
+			if ( s_input )
+			{
+				void** vt = *( void*** )s_input;
+				s_exec = ( void( __fastcall** )( void*, int, const char*, int ) )&vt[ 25 ];
+			}
+		}
+		if ( s_input && s_exec )
+			( *s_exec )( s_input , 5 , cmd , 0 );
 	}
 
 	std::chrono::steady_clock::time_point Now()
@@ -579,6 +602,592 @@ std::uint8_t CHelper::ResolveWeaponKind() const
 	return 0xff;
 }
 
+// ============================================================================
+// 录制(手动快照)
+// ============================================================================
+std::string CHelper::GetCurrentMapName() const
+{
+	auto* pEngine = SDK::Interfaces::EngineToClient();
+	if ( !pEngine || !pEngine->IsInGame() )
+		return {};
+
+	const char* mapRaw = pEngine->GetLevelNameShort();
+	if ( !mapRaw )
+		mapRaw = pEngine->GetLevelName();
+	if ( !mapRaw )
+		return {};
+	return NormalizeMapName( mapRaw );
+}
+
+std::string CHelper::KindLabel( std::uint8_t kind ) const
+{
+	switch ( kind )
+	{
+	case static_cast<std::uint8_t>( nd::kind::smoke ):  return "Smoke";
+	case static_cast<std::uint8_t>( nd::kind::flash ):  return "Flash";
+	case static_cast<std::uint8_t>( nd::kind::molotov ): return "Molotov";
+	case static_cast<std::uint8_t>( nd::kind::he ):     return "HE";
+	case static_cast<std::uint8_t>( nd::kind::decoy ):  return "Decoy";
+	default: return "?";
+	}
+}
+
+
+std::vector<std::string> CHelper::BuildRecorderItems( std::uint8_t kindFilter ) const
+{
+	std::vector<std::string> items;
+	const std::string mapName = GetCurrentMapName();
+	if ( mapName.empty() )
+		return items;
+
+	if ( auto* recorder = GetHelperRecorder() )
+	{
+		if ( const auto* list = recorder->Get( mapName ) )
+		{
+			items.reserve( list->size() );
+			for ( std::size_t i = 0; i < list->size(); ++i )
+			{
+				const auto& lu = ( *list )[ i ];
+				if ( kindFilter != 0xff && lu.kind != kindFilter )
+					continue;
+
+				// 隐藏/覆盖标记放开头,与 Builtin 列表风格一致
+				std::string label;
+				if ( lu.hidden )
+					label += "[hidden] ";
+				else if ( lu.override_builtin_index >= 0 )
+					label += "[override] ";
+				label += std::to_string( i + 1 ) + ". " + lu.name;
+				label += " (" + KindLabel( lu.kind ) + ")";
+				if ( !lu.action.empty() )
+					label += " " + lu.action;
+				items.push_back( std::move( label ) );
+			}
+		}
+	}
+	return items;
+}
+
+bool CHelper::RemoveRecorderItem( int index )
+{
+	const std::string mapName = GetCurrentMapName();
+	if ( mapName.empty() || index < 0 )
+		return false;
+	if ( auto* recorder = GetHelperRecorder() )
+		return recorder->Remove( mapName , static_cast<std::size_t>( index ) );
+	return false;
+}
+
+void CHelper::ClearRecorderMap()
+{
+	const std::string mapName = GetCurrentMapName();
+	if ( mapName.empty() )
+		return;
+	if ( auto* recorder = GetHelperRecorder() )
+		recorder->ClearMap( mapName );
+}
+
+bool CHelper::GetRecorderItem( int index , UserLineup& out ) const
+{
+	const std::string mapName = GetCurrentMapName();
+	if ( mapName.empty() || index < 0 )
+		return false;
+	if ( auto* recorder = GetHelperRecorder() )
+	{
+		if ( const auto* list = recorder->Get( mapName ) )
+		{
+			if ( static_cast<std::size_t>( index ) < list->size() )
+			{
+				out = ( *list )[ static_cast<std::size_t>( index ) ];
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+bool CHelper::UpdateRecorderItem( int index , const UserLineup& lineup )
+{
+	const std::string mapName = GetCurrentMapName();
+	if ( mapName.empty() || index < 0 )
+		return false;
+	if ( auto* recorder = GetHelperRecorder() )
+		return recorder->Update( mapName , static_cast<std::size_t>( index ) , lineup );
+	return false;
+}
+
+int CHelper::GetRecorderIndexAt( int listPos , std::uint8_t kindFilter ) const
+{
+	const std::string mapName = GetCurrentMapName();
+	if ( mapName.empty() || listPos < 0 )
+		return -1;
+
+	if ( auto* recorder = GetHelperRecorder() )
+	{
+		if ( const auto* list = recorder->Get( mapName ) )
+		{
+			int matched = 0;
+			for ( std::size_t i = 0; i < list->size(); ++i )
+			{
+				const auto& lu = ( *list )[ i ];
+				if ( kindFilter != 0xff && lu.kind != kindFilter )
+					continue;
+				if ( matched == listPos )
+					return static_cast<int>( i );
+				++matched;
+			}
+		}
+	}
+	return -1;
+}
+
+std::vector<std::string> CHelper::BuildBuiltinItems( std::uint8_t kindFilter ) const
+{
+	std::vector<std::string> items;
+	const std::string mapName = GetCurrentMapName();
+	if ( mapName.empty() )
+		return items;
+
+	const auto* map = FindMap( mapName );
+	if ( !map )
+		return items;
+
+	// 查某内置点位是否被编辑/隐藏(返回 0=未动 1=已编辑 2=已隐藏)
+	auto overrideState = [&]( std::uint32_t builtinIndex ) -> int
+	{
+		if ( auto* recorder = GetHelperRecorder() )
+		{
+			if ( const auto* list = recorder->Get( mapName ) )
+			{
+				for ( const auto& lu : *list )
+				{
+					if ( lu.override_builtin_index == static_cast<int>( builtinIndex ) )
+						return lu.hidden ? 2 : 1;
+				}
+			}
+		}
+		return 0;
+	};
+
+	items.reserve( map->count );
+	for ( std::uint32_t i = 0; i < map->count; ++i )
+	{
+		const auto& e = map->data[ i ];
+		const std::uint8_t eKind = static_cast<std::uint8_t>( e.type );
+		if ( kindFilter != 0xff && eKind != kindFilter )
+			continue;
+
+		std::string label = "[" + std::to_string( i ) + "]";
+		// 被覆盖编辑/隐藏的内置点位,开头加标记
+		const int state = overrideState( i );
+		if ( state == 2 )
+			label += " [hidden]";
+		else if ( state == 1 )
+			label += " [edited]";
+		label += " " + std::string( e.name ? e.name : "" );
+		label += " (" + KindLabel( eKind ) + ")";
+		if ( e.action )
+		{
+			label += " ";
+			label += e.action;
+		}
+		items.push_back( std::move( label ) );
+	}
+	return items;
+}
+
+bool CHelper::GetBuiltinItem( int listPos , std::uint8_t kindFilter , UserLineup& out ) const
+{
+	const std::string mapName = GetCurrentMapName();
+	if ( mapName.empty() || listPos < 0 )
+		return false;
+
+	const auto* map = FindMap( mapName );
+	if ( !map )
+		return false;
+
+	// 按筛选定位:跳过非匹配类型,listPos 是"筛选后列表"的位置
+	int matched = 0;
+	for ( std::uint32_t i = 0; i < map->count; ++i )
+	{
+		const auto& e = map->data[ i ];
+		const std::uint8_t eKind = static_cast<std::uint8_t>( e.type );
+		if ( kindFilter != 0xff && eKind != kindFilter )
+			continue;
+
+		if ( matched == listPos )
+		{
+			// 若该内置点位已被用户覆盖(编辑/隐藏),载入覆盖版本(含 hidden)
+			if ( auto* recorder = GetHelperRecorder() )
+			{
+				if ( const auto* list = recorder->Get( mapName ) )
+				{
+					for ( const auto& lu : *list )
+					{
+						if ( lu.override_builtin_index == static_cast<int>( i ) )
+						{
+							out = lu; // 覆盖条目已含 hidden 与原始索引
+							return true;
+						}
+					}
+				}
+			}
+
+			out.name = e.name ? e.name : "";
+			out.action = e.action ? e.action : "";
+			out.x = e.x; out.y = e.y; out.z = e.z;
+			out.pitch = e.pitch; out.yaw = e.yaw;
+			out.kind = eKind;
+			out.actions = e.actions;
+			out.run_ticks = e.run_ticks;
+			out.after_jump_ticks = e.after_jump_ticks;
+			out.throw_strength = e.throw_strength;
+			out.manual = e.manual;
+			out.override_builtin_index = static_cast<int>( i ); // 内置原始索引
+			return true;
+		}
+		++matched;
+	}
+	return false;
+}
+
+bool CHelper::SaveBuiltinOverride( int builtinIndex , const UserLineup& lineup )
+{
+	const std::string mapName = GetCurrentMapName();
+	if ( mapName.empty() || builtinIndex < 0 )
+		return false;
+
+	auto* recorder = GetHelperRecorder();
+	if ( !recorder )
+		return false;
+
+	// 取内置原值,判断 lineup 是否与内置原值完全相同
+	const auto* map = FindMap( mapName );
+	bool sameAsBuiltin = false;
+	if ( map && static_cast<std::uint32_t>( builtinIndex ) < map->count )
+	{
+		const auto& e = map->data[ builtinIndex ];
+		sameAsBuiltin =
+			lineup.hidden == false
+			&& lineup.name == ( e.name ? e.name : "" )
+			&& lineup.action == ( e.action ? e.action : "" )
+			&& lineup.x == e.x && lineup.y == e.y && lineup.z == e.z
+			&& lineup.pitch == e.pitch && lineup.yaw == e.yaw
+			&& lineup.kind == static_cast<std::uint8_t>( e.type )
+			&& lineup.actions == e.actions
+			&& lineup.run_ticks == e.run_ticks
+			&& lineup.after_jump_ticks == e.after_jump_ticks
+			&& lineup.throw_strength == e.throw_strength
+			&& lineup.manual == e.manual;
+	}
+
+	// 与内置原值完全相同 → 不是一次真正的编辑:删除覆盖条目,恢复内置原样
+	if ( sameAsBuiltin )
+		return RemoveBuiltinOverride( builtinIndex );
+
+	// 已有同索引覆盖条目 → 更新
+	if ( const auto* list = recorder->Get( mapName ) )
+	{
+		for ( std::size_t i = 0; i < list->size(); ++i )
+		{
+			if ( ( *list )[ i ].override_builtin_index == builtinIndex )
+			{
+				UserLineup updated = lineup;
+				updated.override_builtin_index = builtinIndex;
+				return recorder->Update( mapName , i , updated );
+			}
+		}
+	}
+
+	// 无则新增覆盖条目
+	UserLineup added = lineup;
+	added.override_builtin_index = builtinIndex;
+	recorder->Add( mapName , added );
+	return true;
+}
+
+bool CHelper::RemoveBuiltinOverride( int builtinIndex )
+{
+	const std::string mapName = GetCurrentMapName();
+	if ( mapName.empty() || builtinIndex < 0 )
+		return false;
+
+	auto* recorder = GetHelperRecorder();
+	if ( !recorder )
+		return false;
+
+	if ( const auto* list = recorder->Get( mapName ) )
+	{
+		for ( std::size_t i = 0; i < list->size(); ++i )
+		{
+			if ( ( *list )[ i ].override_builtin_index == builtinIndex )
+				return recorder->Remove( mapName , i );
+		}
+	}
+	return false;
+}
+
+void CHelper::TeleportTo( const UserLineup& lineup )
+{
+	// setpos x y z; setang pitch yaw 0(roll 恒为 0,投掷点位无翻滚)
+	char cmd[ 256 ];
+	std::snprintf( cmd , sizeof( cmd ) , "setpos %f %f %f; setang %f %f 0" ,
+		lineup.x , lineup.y , lineup.z , lineup.pitch , lineup.yaw );
+	RunConsoleCommand( cmd );
+	DEV_LOG( "[helper] teleport -> %s" , cmd );
+}
+
+void CHelper::SetRecordName( const std::string& name )
+{
+	m_RecordName = name;
+}
+
+// ============================================================================
+// 录制会话(toggle 键:按下开始,再按一下保存)
+// 会话中跟踪:拔销站位、起跳时机、跑动 tick、蹲姿、出手力度与视角
+// ============================================================================
+void CHelper::BeginRecordSession()
+{
+	m_RecordSessionActive = true;
+	m_SessionReady = false;
+	m_SessionPinArmed = false;
+	m_SessionWasAirborne = false;
+	m_SessionWasCrouch = false;
+	m_SessionWasWalk = false;
+	m_SessionThrew = false;
+	m_SessionArmTick = 0;
+	m_SessionJumpTick = 0;
+	m_SessionThrowTick = 0;
+	m_SessionRunTicks = 0;
+	m_SessionAfterJumpTicks = 0;
+	m_SessionArmPos = {};
+	m_SessionThrowAngles = {};
+	m_SessionStrength = 1.f;
+	m_SessionKind = 0xff;
+
+	// 描点 = 玩家按下录制键那一刻的瞄准方向(不是保存/出手时的视角)
+	GetRenderCameraAngles( m_SessionThrowAngles );
+	m_SessionStartTime = Now();
+	DEV_LOG( "[helper] record session started" );
+}
+
+void CHelper::UpdateRecordSession()
+{
+	auto* player = GetCL_Players()->GetLocalPlayerPawn();
+	if ( !player || !player->IsAlive() || player->m_bIsBuyMenuOpen() )
+		return;
+
+	const std::uint32_t tick = TickCount();
+	const Vector3 pos = player->GetOrigin();
+
+	// 就绪门槛:会话开始后先等玩家"手持投掷物且基本静止"才正式记录,
+	// 避免把走过去/切雷的晃动过程录进站位与动作。
+	if ( !m_SessionReady )
+	{
+		const std::uint8_t readyKind = ResolveWeaponKind();
+		const Vector3 vel = player->m_vecAbsVelocity();
+		const float horizSpeedSqr = vel.m_x * vel.m_x + vel.m_y * vel.m_y;
+		const bool still = std::isfinite( vel.m_x ) && horizSpeedSqr <= ( 15.f * 15.f )
+			&& std::abs( vel.m_z ) <= 12.f;
+		if ( readyKind != 0xff && still )
+		{
+			m_SessionReady = true;
+			DEV_LOG( "[helper] record session ready (grenade in hand, standing still)" );
+		}
+		return;
+	}
+
+	// 蹲姿
+	bool ducked = false;
+	if ( auto* mv = player->m_pMovementServices() )
+	{
+		auto* ms = reinterpret_cast<CCSPlayer_MovementServices*>( mv );
+		ducked = ms->m_bDucked() || ms->m_flDuckAmount() >= 0.94f;
+	}
+
+	// 空中(跳投)
+	const std::uint32_t flags = player->m_fFlags();
+	const Vector3 velocity = player->m_vecAbsVelocity();
+	const bool airborne = ( flags & 1u ) == 0u
+		|| ( std::isfinite( velocity.m_z ) && std::abs( velocity.m_z ) > 12.f );
+
+	const std::uint8_t kind = ResolveWeaponKind();
+	auto* weapon = GetCL_Weapons()->GetLocalActiveWeapon();
+
+	if ( kind == 0xff || !weapon )
+	{
+		// 手里不是雷:若此前已 armed,说明刚扔出去/切走 → 出手完成
+		if ( m_SessionPinArmed )
+		{
+			m_SessionPinArmed = false;
+			m_SessionThrew = true;
+			m_SessionThrowTick = tick;
+			if ( m_SessionJumpTick != 0 && tick > m_SessionJumpTick )
+				m_SessionAfterJumpTicks = static_cast<std::uint8_t>( std::min<std::uint32_t>( tick - m_SessionJumpTick , 255 ) );
+		}
+		return;
+	}
+
+	auto* grenade = reinterpret_cast<C_BaseCSGrenade*>( weapon );
+	const bool pinPulled = grenade->m_bPinPulled();
+
+	if ( !m_SessionPinArmed )
+	{
+		// 拔销:投掷动作开始,记录站位与雷类型
+		if ( pinPulled )
+		{
+			m_SessionPinArmed = true;
+			m_SessionArmTick = tick;
+			m_SessionArmPos = pos;
+			m_SessionKind = kind;
+			m_SessionRunTicks = 0;
+			m_SessionJumpTick = 0;
+			m_SessionWasAirborne = false;
+			m_SessionWasCrouch = ducked;
+			m_SessionWasWalk = false;
+		}
+		return;
+	}
+
+	// 监视中:力度 / 跑动(按实际水平速度,不依赖 helper 按键绑定)/ 起跳
+	const float strength = grenade->m_flThrowStrength();
+	if ( std::isfinite( strength ) )
+		m_SessionStrength = strength;
+
+	// 拔销后在地面移动(水平速度 > 5 u/s 视为移动,低阈值避免起步漏计)
+	// → 按游戏 tick 去重累计,窗口与执行端 DriveThrow 对齐(拔销 → 起跳/出手)
+	if ( tick != m_SessionLastTick )
+	{
+		const float horizSpeedSqr = velocity.m_x * velocity.m_x + velocity.m_y * velocity.m_y;
+		const bool moving = std::isfinite( velocity.m_x ) && std::isfinite( velocity.m_y )
+			&& horizSpeedSqr > ( 5.f * 5.f );
+		if ( moving && !airborne )
+		{
+			++m_SessionRunTicks;
+			// 静步:跑动期间按下玩家的静步绑定键(改键后同样生效)→ action_walk
+			if ( helper::g_move_walk.active() )
+				m_SessionWasWalk = true;
+		}
+		m_SessionLastTick = tick;
+	}
+
+	// 起跳:记录首个空中 tick,并持续累积空中状态(覆盖"松手瞬间武器切走"的分支)
+	if ( airborne && m_SessionJumpTick == 0 )
+		m_SessionJumpTick = tick;
+	if ( airborne )
+		m_SessionWasAirborne = true;
+
+	if ( m_SessionWasCrouch == false && ducked )
+		m_SessionWasCrouch = true;
+
+	// 松手(销收回)= 出手完成
+	if ( !pinPulled )
+	{
+		m_SessionPinArmed = false;
+		m_SessionThrew = true;
+		m_SessionThrowTick = tick;
+		if ( m_SessionJumpTick != 0 && tick > m_SessionJumpTick )
+			m_SessionAfterJumpTicks = static_cast<std::uint8_t>( std::min<std::uint32_t>( tick - m_SessionJumpTick , 255 ) );
+	}
+}
+
+void CHelper::EndRecordSession()
+{
+	SaveSessionLineup();
+	m_RecordSessionActive = false;
+	DEV_LOG( "[helper] record session ended" );
+}
+
+void CHelper::SaveSessionLineup()
+{
+	const std::string mapName = GetCurrentMapName();
+	if ( mapName.empty() )
+		return;
+
+	auto* player = GetCL_Players()->GetLocalPlayerPawn();
+	if ( !player || !player->IsAlive() )
+		return;
+
+	auto* recorder = GetHelperRecorder();
+	if ( !recorder )
+		return;
+
+	UserLineup lineup;
+	lineup.manual = true;
+
+	if ( m_SessionThrew && m_SessionKind != 0xff )
+	{
+		// 会话内真实投掷:用拔销站位 + 出手视角 + 动作时序
+		lineup.x = m_SessionArmPos.m_x;
+		lineup.y = m_SessionArmPos.m_y;
+		lineup.z = m_SessionArmPos.m_z;
+		lineup.pitch = m_SessionThrowAngles.m_x;
+		lineup.yaw = m_SessionThrowAngles.m_y;
+		lineup.kind = m_SessionKind;
+
+		std::uint16_t actions = 0;
+		if ( m_SessionWasCrouch )
+			actions |= nd::action_crouch;
+		if ( m_SessionRunTicks > 0 )
+			actions |= nd::action_run;
+		if ( m_SessionRunTicks > 0 && m_SessionWasWalk )
+			actions |= nd::action_walk;
+		if ( m_SessionWasAirborne )
+			actions |= nd::action_jump;
+		lineup.actions = actions;
+
+		lineup.run_ticks = std::min<std::uint32_t>( m_SessionRunTicks , 0xFFFFu );
+		lineup.after_jump_ticks = m_SessionAfterJumpTicks;
+
+		// 力度圆整到 {0.0, 0.5, 1.0}(对齐左键/右键/双键三档)
+		float strength = m_SessionStrength;
+		if ( strength < 0.25f )
+			strength = 0.f;
+		else if ( strength < 0.75f )
+			strength = 0.5f;
+		else
+			strength = 1.f;
+		lineup.throw_strength = strength;
+	}
+	else
+	{
+		// 会话内没投掷:退化为当前快照(点一下关闭也要保存)
+		const std::uint8_t kind = ResolveWeaponKind();
+		if ( kind == 0xff )
+			return;
+		const Vector3 pos = player->GetOrigin();
+		lineup.x = pos.m_x;
+		lineup.y = pos.m_y;
+		lineup.z = pos.m_z;
+		lineup.pitch = m_SessionThrowAngles.m_x;
+		lineup.yaw = m_SessionThrowAngles.m_y;
+		lineup.kind = kind;
+		lineup.actions = 0;
+		lineup.run_ticks = 0;
+		lineup.after_jump_ticks = 0;
+		lineup.throw_strength = 1.f;
+	}
+
+	// 动作标签 + 自动命名(对齐内置点位:run+walk 显示 Walk+,纯 run 显示 Run+)
+	lineup.action = CHelperRecorder::BuildActionLabel( lineup.actions );
+
+	// 名字:优先用面板输入框的名字,空则自动 Custom N
+	if ( !m_RecordName.empty() )
+		lineup.name = m_RecordName;
+	else
+	{
+		const auto* existing = recorder->Get( mapName );
+		const int count = existing ? static_cast<int>( existing->size() ) : 0;
+		lineup.name = "Custom " + std::to_string( count + 1 );
+	}
+
+	const int index = recorder->Add( mapName , lineup );
+	DEV_LOG( "[helper] saved session %s on %s (idx=%d kind=%u str=%.2f run=%u aj=%u)" ,
+		lineup.name.c_str() , mapName.c_str() , index , lineup.kind ,
+		lineup.throw_strength , lineup.run_ticks , lineup.after_jump_ticks );
+}
+
+
 bool CHelper::Collect( const Vector3& playerPos , std::uint8_t weaponKind , std::vector<LineupView>& out ) const
 {
 	out.clear();
@@ -594,30 +1203,95 @@ bool CHelper::Collect( const Vector3& playerPos , std::uint8_t weaponKind , std:
 	if ( !mapRaw )
 		return false;
 
-	const auto* map = FindMap( NormalizeMapName( mapRaw ) );
-	if ( !map )
-		return false;
+	const std::string mapName = NormalizeMapName( mapRaw );
+	const auto* map = FindMap( mapName );
 
 	const int drawDistance = menu_state::drawDistance;
 	const float maxDistanceSqr = static_cast<float>( drawDistance ) * drawDistance;
 
-	for ( std::uint32_t i = 0; i < map->count; ++i )
+	// 用户录制点位表(含内置覆盖条目,先取出来供内置遍历时查覆盖)
+	const std::vector<UserLineup>* userLineups = nullptr;
+	if ( auto* recorder = GetHelperRecorder() )
+		userLineups = recorder->Get( mapName );
+
+	// 查某条内置点位是否被用户覆盖(返回覆盖条目指针,无则 nullptr)
+	auto findOverride = [&]( std::uint32_t builtinIndex ) -> const UserLineup*
 	{
-		const auto& entry = map->data[ i ];
-		if ( static_cast<std::uint8_t>( entry.type ) != weaponKind )
-			continue;
+		if ( !userLineups )
+			return nullptr;
+		for ( const auto& lu : *userLineups )
+			if ( lu.override_builtin_index == static_cast<int>( builtinIndex ) )
+				return &lu;
+		return nullptr;
+	};
 
-		const Vector3 position{ entry.x , entry.y , entry.z };
-		const float distanceSqr = ( position - playerPos ).LengthSquared();
-		if ( distanceSqr > maxDistanceSqr )
-			continue;
+	// 内置点位表(某些地图可能没有,此时仅用用户录制点位)。
+	if ( map )
+	{
+		for ( std::uint32_t i = 0; i < map->count; ++i )
+		{
+			const auto& entry = map->data[ i ];
+			if ( static_cast<std::uint8_t>( entry.type ) != weaponKind )
+				continue;
 
-		out.push_back( LineupView{
-			entry.name , entry.action , position , entry.pitch , entry.yaw ,
-			static_cast<std::uint8_t>( entry.type ) ,
-			entry.actions , entry.run_ticks , entry.after_jump_ticks , entry.throw_strength , entry.manual ,
-			std::sqrtf( distanceSqr ) ,
-		} );
+			// 有覆盖:隐藏则不显示不参与;否则用覆盖版本替代内置原条目
+			if ( const auto* ov = findOverride( i ) )
+			{
+				if ( ov->hidden )
+					continue; // 该内置点位被用户隐藏
+				if ( ov->kind != weaponKind )
+					continue;
+				const Vector3 position{ ov->x , ov->y , ov->z };
+				const float distanceSqr = ( position - playerPos ).LengthSquared();
+				if ( distanceSqr > maxDistanceSqr )
+					continue;
+				out.push_back( LineupView{
+					ov->name , ov->action , position , ov->pitch , ov->yaw ,
+					ov->kind ,
+					ov->actions , ov->run_ticks , ov->after_jump_ticks , ov->throw_strength , ov->manual ,
+					std::sqrtf( distanceSqr ) ,
+				} );
+				continue;
+			}
+
+			const Vector3 position{ entry.x , entry.y , entry.z };
+			const float distanceSqr = ( position - playerPos ).LengthSquared();
+			if ( distanceSqr > maxDistanceSqr )
+				continue;
+
+			out.push_back( LineupView{
+				entry.name , entry.action , position , entry.pitch , entry.yaw ,
+				static_cast<std::uint8_t>( entry.type ) ,
+				entry.actions , entry.run_ticks , entry.after_jump_ticks , entry.throw_strength , entry.manual ,
+				std::sqrtf( distanceSqr ) ,
+			} );
+		}
+	}
+
+	// 用户录制点位(内置覆盖条目已在上面替代,这里只收普通录制点位)。
+	if ( userLineups )
+	{
+		for ( const auto& lu : *userLineups )
+		{
+			if ( lu.override_builtin_index >= 0 )
+				continue; // 覆盖条目不重复收集
+			if ( lu.hidden )
+				continue; // 被用户隐藏的录制点位
+			if ( lu.kind != weaponKind )
+				continue;
+
+			const Vector3 position{ lu.x , lu.y , lu.z };
+			const float distanceSqr = ( position - playerPos ).LengthSquared();
+			if ( distanceSqr > maxDistanceSqr )
+				continue;
+
+			out.push_back( LineupView{
+				lu.name , lu.action , position , lu.pitch , lu.yaw ,
+				lu.kind ,
+				lu.actions , lu.run_ticks , lu.after_jump_ticks , lu.throw_strength , lu.manual ,
+				std::sqrtf( distanceSqr ) ,
+			} );
+		}
 	}
 
 	std::sort( out.begin() , out.end() , []( const LineupView& a , const LineupView& b )
@@ -793,7 +1467,7 @@ void CHelper::ReleaseAttacks()
 void CHelper::ResetLock()
 {
 	m_LockStarted = {};
-	m_LockName = nullptr;
+	m_LockName.clear();
 	m_LockPosition = {};
 	m_LockPitch = 0.f;
 	m_LockYaw = 0.f;
@@ -1085,6 +1759,7 @@ void CHelper::DriveThrow( std::uintptr_t pawn , std::uintptr_t weapon , std::uin
 		{
 			if ( !m_Forward.pressed )
 			{
+				// 内置点位模型:跑动固定向前(W),录制 run_ticks 口径与此一致
 				if ( ( m_ActiveLineup.actions & nd::action_walk ) && !SetControl( m_Walk , true ) )
 				{
 					CancelThrow( true );
@@ -1175,6 +1850,18 @@ void CHelper::DriveThrow( std::uintptr_t pawn , std::uintptr_t weapon , std::uin
 // ============================================================================
 void CHelper::Tick()
 {
+	// 录制键(toggle 类型):按下开始录制会话,再按一下结束并保存。
+	// 会话中跟踪移动(run_ticks)/起跳(after_jump_ticks)/蹲姿/力度/出手视角。
+	const bool recActive = helper::g_record_key.active();
+	if ( recActive && !m_RecordKeyPrev )
+		BeginRecordSession();
+	else if ( !recActive && m_RecordKeyPrev && m_RecordSessionActive )
+		EndRecordSession();
+	m_RecordKeyPrev = recActive;
+
+	if ( m_RecordSessionActive )
+		UpdateRecordSession();
+
 	if ( !menu_state::helperEnabled )
 	{
 		// 无条件释放所有注入键(含走位方向键),避免方向键卡住
@@ -1353,7 +2040,8 @@ void CHelper::Tick()
 		&& Now() - m_LockStarted
 			>= std::chrono::milliseconds( std::clamp( menu_state::lockTimeMs , 0 , 250 ) );
 
-	if ( menu_state::autoExecute && !lineup.manual && settled )
+	// 内置点位与用户录制点位都参与自动执行(manual 仅用于来源标记,不排除执行)
+	if ( menu_state::autoExecute && settled )
 	{
 		if ( !BeginThrow( lineup , reinterpret_cast<std::uintptr_t>( player ) ,
 			reinterpret_cast<std::uintptr_t>( weapon ) , tick , Now() ) )
@@ -1397,17 +2085,17 @@ void CHelper::DrawMarker( ImDrawList* drawList , const LineupView& lineup , bool
 	if ( !Math::WorldToScreen( world , screen ) )
 		return;
 
-	ImFont* font = ImGui::GetFont();
+	ImFont* font = g_font->f_childs.get_font();
 	const float fontSize = font ? font->FontSize : 15.f;
 
-	const std::string title = lineup.name ? lineup.name : "?";
+	const std::string title = lineup.name.empty() ? "?" : lineup.name;
 	const ImVec2 titleSize = font
 		? font->CalcTextSizeA( fontSize , FLT_MAX , -1.f , title.c_str() )
 		: ImVec2( 100.f , 20.f );
 
 	// 副标题:投掷动作 + 距离(米)
 	std::string subtitle;
-	if ( menu_state::showAction && lineup.action )
+	if ( menu_state::showAction && !lineup.action.empty() )
 		subtitle = lineup.action;
 	if ( menu_state::showDistance )
 	{
@@ -1562,19 +2250,22 @@ void CHelper::DrawMouseAimPoints( ImDrawList* drawList , int screenW , int scree
 	{
 		const bool converged = a.converged;
 
+		// 描点圈半径随 aim_threshold(度)线性放大:阈值越大允许误差越大,圈越大
+		const float ringRadius = 4.f + menu_state::aimThreshold * 6.f;
+
 		// 背景圈 + 瞄点圈(就绪主题色,未就绪灰色)
-		drawList->AddCircleFilled( a.screen , 8.f , IM_COL32( 0 , 0 , 0 , 64 ) , 16 );
+		drawList->AddCircleFilled( a.screen , ringRadius + 2.f , IM_COL32( 0 , 0 , 0 , 64 ) , 16 );
 		const ImU32 ring = converged ? themeCol : grayCol;
-		drawList->AddCircle( a.screen , 6.f , ring , 16 , converged ? 2.f : 1.f );
+		drawList->AddCircle( a.screen , ringRadius , ring , 16 , converged ? 2.f : 1.f );
 
 		// 描点卡片(黑底圆角 + 名称/action,就绪主题色/未就绪灰色)
-		ImFont* font = ImGui::GetFont();
+		ImFont* font = g_font->f_childs.get_font();
 		const float fontSize = font ? font->FontSize : 14.f;
 		if ( font )
 		{
-			const std::string name = a.lineup->name ? a.lineup->name : "?";
+			const std::string name = a.lineup->name.empty() ? "?" : a.lineup->name;
 			std::string action;
-			if ( menu_state::showAction && a.lineup->action )
+			if ( menu_state::showAction && !a.lineup->action.empty() )
 				action = a.lineup->action;
 			const ImU32 textCol = converged ? themeCol : grayTextCol;
 
@@ -1600,6 +2291,94 @@ void CHelper::DrawMouseAimPoints( ImDrawList* drawList , int screenW , int scree
 	}
 }
 
+// 录制状态卡片:屏幕顶部中央的红色 REC + 已录制时长(仅录制会话中显示)
+void CHelper::DrawRecordStatus( ImDrawList* drawList , int screenW , int screenH ) const
+{
+	if ( !m_RecordSessionActive )
+		return;
+
+	ImFont* font = ImGui::GetFont();
+	if ( !font )
+		return;
+
+	// 已录制时长
+	const auto now = Now();
+	const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>( now - m_SessionStartTime ).count();
+	char timeBuf[ 32 ];
+	std::snprintf( timeBuf , sizeof( timeBuf ) , "%d.%02ds" ,
+		static_cast<int>( elapsed / 1000 ) , static_cast<int>( ( elapsed % 1000 ) / 10 ) );
+
+	// 呼吸红点(未就绪常亮偏暗,就绪后闪烁)
+	const float pulse = 0.5f + 0.5f * std::sinf( static_cast<float>( ImGui::GetTime() ) * 6.f );
+	const float dotAlpha = m_SessionReady ? 120.f + 135.f * pulse : 150.f;
+	const ImU32 dotCol = IM_COL32( 255 , 40 , 40 , static_cast<int>( dotAlpha ) );
+
+	// 标题行:● REC  3.25s
+	const std::string label = "REC";
+	const float titleSize = 18.f;
+	const char* timeStr = timeBuf;
+
+	// 参数行(仅就绪后)
+	std::string params;
+	if ( m_SessionReady )
+	{
+		char buf[ 160 ];
+		std::snprintf( buf , sizeof( buf ) , "run=%u  aj=%u  %s%s%s  str=%.2f" ,
+			m_SessionRunTicks , m_SessionAfterJumpTicks ,
+			m_SessionWasCrouch ? "crouch " : "" ,
+			m_SessionWasWalk ? "walk " : "" ,
+			m_SessionWasAirborne ? "jump" : "" ,
+			m_SessionStrength );
+		params = buf;
+	}
+
+	// 布局参数
+	const float padX = 14.f;
+	const float padY = 9.f;
+	const float dotR = 5.f;
+	const float gapTitle = 8.f;
+
+	const ImVec2 titleSz = font->CalcTextSizeA( titleSize , FLT_MAX , -1.f , label.c_str() );
+	const ImVec2 timeSz = font->CalcTextSizeA( titleSize , FLT_MAX , -1.f , timeStr );
+	const float paramsSize = 14.f;
+	const ImVec2 paramsSz = params.empty()
+		? ImVec2{}
+		: font->CalcTextSizeA( paramsSize , FLT_MAX , -1.f , params.c_str() );
+
+	// 卡片尺寸:标题行(圆点+REC+时长)为最宽基准,参数行取较宽者
+	const float titleW = dotR * 2.f + gapTitle + titleSz.x + gapTitle + timeSz.x;
+	const float cardW = std::max( titleW , paramsSz.x ) + padX * 2.f;
+	const float cardH = padY * 2.f + titleSz.y + ( params.empty() ? 0.f : paramsSize + 6.f );
+
+	// 位置:底部偏上,水平居中
+	const float bottomGap = 140.f;
+	const ImVec2 cardPos( ( screenW - cardW ) * 0.5f , screenH - bottomGap - cardH );
+	const ImVec2 cardEnd( cardPos.x + cardW , cardPos.y + cardH );
+
+	// 半透明黑底圆角卡(无边框)
+	drawList->AddRectFilled( cardPos , cardEnd , IM_COL32( 0 , 0 , 0 , 165 ) , 6.f );
+
+	// 第一行:圆点 + REC + 时长(时长右对齐到卡片右缘)
+	const float contentTop = cardPos.y + padY;
+	const ImVec2 dotC( cardPos.x + padX + dotR , contentTop + titleSz.y * 0.5f );
+	drawList->AddCircleFilled( dotC , dotR , dotCol );
+	drawList->AddCircle( dotC , dotR , IM_COL32( 255 , 40 , 40 , 160 ) );
+
+	const float textLeft = dotC.x + dotR + gapTitle;
+	drawList->AddText( font , titleSize , { textLeft , contentTop } , IM_COL32( 255 , 90 , 90 , 255 ) , label.c_str() );
+
+	const float timeLeft = cardEnd.x - padX - timeSz.x;
+	drawList->AddText( font , titleSize , { timeLeft , contentTop } , IM_COL32( 245 , 247 , 252 , 255 ) , timeStr );
+
+	// 第二行:实时参数(仅就绪后),浅灰白
+	if ( !params.empty() )
+	{
+		const float paramsTop = contentTop + titleSz.y + 6.f;
+		drawList->AddText( font , paramsSize , { cardPos.x + padX , paramsTop } ,
+			IM_COL32( 210 , 215 , 225 , 235 ) , params.c_str() );
+	}
+}
+
 // 渲染主入口
 auto CHelper::OnRender( ImDrawList* drawList , int screenW , int screenH ) -> void
 {
@@ -1607,6 +2386,9 @@ auto CHelper::OnRender( ImDrawList* drawList , int screenW , int screenH ) -> vo
 		return;
 
 	Tick();
+
+	// 录制状态卡片(与 helper 开关无关,录制会话中始终显示)
+	DrawRecordStatus( drawList , screenW , screenH );
 
 	auto* player = GetCL_Players()->GetLocalPlayerPawn();
 	if ( !player || !player->IsAlive() || !menu_state::helperEnabled )
@@ -1659,7 +2441,7 @@ auto CHelper::OnRender( ImDrawList* drawList , int screenW , int screenH ) -> vo
 		if ( screen.x < 0.f || screen.x > (float)screenW || screen.y < 0.f || screen.y > (float)screenH )
 			continue;
 
-		ImFont* font = ImGui::GetFont();
+		ImFont* font = g_font->f_childs.get_font();
 		const float fontSize = font ? font->FontSize : 14.f;
 
 		// 名牌尺寸:图标槽 + 分隔线 + 垂直堆叠的名字(带距离)
@@ -1672,7 +2454,7 @@ auto CHelper::OnRender( ImDrawList* drawList , int screenW , int screenH ) -> vo
 		std::vector<ImVec2> sizes;
 		for ( const auto* p : g.points )
 		{
-			std::string name = p->name ? p->name : "?";
+			std::string name = p->name.empty() ? "?" : p->name;
 			if ( menu_state::showDistance )
 			{
 				char buf[ 32 ];
@@ -1722,7 +2504,7 @@ auto CHelper::OnRender( ImDrawList* drawList , int screenW , int screenH ) -> vo
 		float y = top + ( cardH - totalH ) * 0.5f;
 		for ( std::size_t i = 0; i < g.points.size(); ++i )
 		{
-			std::string name = g.points[ i ]->name ? g.points[ i ]->name : "?";
+			std::string name = g.points[ i ]->name.empty() ? "?" : g.points[ i ]->name;
 			if ( menu_state::showDistance )
 			{
 				char buf[ 32 ];

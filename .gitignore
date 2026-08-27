@@ -11,7 +11,3 @@ bin/
 *.ncb
 *.opensdf
 *.sdf
-exported_fonts/
-
-# 本地备份目录
-*- 副本/

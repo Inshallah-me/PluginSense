@@ -66,13 +66,13 @@ namespace
 	static constexpr int kCooldownTimeCount = 8;
 	static constexpr int kCooldownTimeCustomIndex = 7;
 
-	// ------------------------------------------------------------------ client.dll 偏移(2026-08-25 更新,IDA 实测)
-	// dword_1823DD9E0 : flag(0x200 = 有冷却)
-	// qword_1823DDA74 : 低 32 位 = 冷却到期时间戳,高 32 位 = 冷却类型
-	// dword_1823DDA7C : VAC 封禁标志(非零 = VAC 封禁)
-	static constexpr uintptr_t OFF_COOLDOWN_FLAGS = 0x23DD9E0;
-	static constexpr uintptr_t OFF_COOLDOWN_DATA = 0x23DDA74;
-	static constexpr uintptr_t OFF_VAC_BAN = 0x23DDA7C;
+	// ------------------------------------------------------------------ client.dll 偏移(2026-08-27 更新,IDA 实测)
+	// dword_1823DC9E0 : flag(0x200 = 有冷却)
+	// qword_1823DCA74 : 低 32 位 = 冷却到期时间戳,高 32 位 = 冷却类型
+	// dword_1823DCA7C : VAC 封禁标志(非零 = VAC 封禁)
+	static constexpr uintptr_t OFF_COOLDOWN_FLAGS = 0x23DC9E0;
+	static constexpr uintptr_t OFF_COOLDOWN_DATA = 0x23DCA74;
+	static constexpr uintptr_t OFF_VAC_BAN = 0x23DCA7C;
 
 	static uint64_t g_OriginalCooldownData = 0;
 	static uint32_t g_OriginalFlags = 0;

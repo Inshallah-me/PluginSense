@@ -48,6 +48,13 @@ namespace framework
 			m_on_select = std::move(fn);
 			return this;
 		}
+
+		// 鼠标是否悬停在列表可滚动区域内(供父 child 判断:此区域滚动应只作用于列表)
+		bool is_mouse_over_scroll_area() const
+		{
+			auto position = m_hide_label ? math::c_vector_2d(0, 0) : math::c_vector_2d(0, g_font->f_childs.measure(m_label).y + 5);
+			return g_input->mouse_in_region(m_pos + position, math::c_vector_2d(m_child_size, m_height));
+		}
 	private:
 		int* m_var{};
 		std::vector<std::string> m_items{};

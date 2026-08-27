@@ -286,12 +286,34 @@ namespace framework
 		bool is_hovered = g_input->mouse_in_region(this->m_pos, this->m_size);
 		if (is_hovered && this->visible() && m_max_scroll > 0.f && g_ctx->top_focus() == nullptr)
 		{
-			float scroll_speed = 40.f;
-			float scroll_delta = g_input->get_wheel_value();
+			// 鼠标悬停在 listbox 的可滚动区域上时,滚动应只作用于该控件,
+			// 不联动滚动整个分区(否则列表滚动时分区也跟着滚)
+			// 用控件当前 m_pos(上一帧 draw 已设置)+ listbox 自身滚动区域精确判断
+			bool overScrollable = false;
+			for (const auto& control : m_controls)
+			{
+				if (!control || control->m_type != framework::element_type::listbox)
+					continue;
+				auto* lb = dynamic_cast<framework::c_listbox*>(control.get());
+				if (lb && lb->is_mouse_over_scroll_area())
+				{
+					overScrollable = true;
+					break;
+				}
+			}
 
-			m_scroll_target -= scroll_delta * scroll_speed;
-			m_scroll_target = std::clamp(m_scroll_target, 0.f, m_max_scroll);
+			if (!overScrollable)
+			{
+				float scroll_speed = 40.f;
+				float scroll_delta = g_input->get_wheel_value();
+
+				m_scroll_target -= scroll_delta * scroll_speed;
+			}
 		}
+
+		// 内容变短(删除列表项/隐藏控件)后 m_max_scroll 会缩小,
+		// 这里每帧 clamp 一次,保证滚动不会停在越界位置(否则顶部控件被滚出视野)
+		m_scroll_target = std::clamp(m_scroll_target, 0.f, m_max_scroll);
 
 		float lerp_speed = 0.15f;
 		m_scroll_offset += (m_scroll_target - m_scroll_offset) * lerp_speed;

@@ -11,6 +11,7 @@
 #include <PluginSenseClient/CPluginSenseGUI.hpp>
 #include <PluginSenseClient/Fonts/CFontManager.hpp>
 #include <PluginSenseClient/Render/CRenderStackSystem.hpp>
+#include <PluginSenseClient/Render/CRender.hpp>
 #include <PluginSenseClient/Features/CNameChanger/CNameChanger.hpp>
 #include <PluginSenseClient/Features/CChatSpammer/CChatSpammer.hpp>
 #include <PluginSenseClient/Features/CKillSay/CKillSay.hpp>
@@ -24,8 +25,8 @@
 #include <PluginSenseClient/Features/CLobbySpoof/CLobbySpoof.hpp>
 #include <PluginSenseClient/Features/CWeaponModel/CWeaponModel.hpp>
 #include <PluginSenseClient/Features/CHelper/CHelper.hpp>
+#include <PluginSenseClient/Features/CHelper/CHelperRecorder.hpp>
 #include <PluginSenseClient/Features/CBulletSparks/CBulletSparks.hpp>
-#include <PluginSenseClient/Features/CDamageEffect/CDamageEffect.hpp>
 #include <PluginSenseClient/Settings/MenuState.hpp>
 #include <GameClient/CL_Players.hpp>
 #include <PluginSenseClient/GUI/framework_w/framework/menu.hh>
@@ -43,7 +44,7 @@ auto CPluginSenseClient::OnInit() -> void
 		GetLobbySpoof()->Init();
 	GetWeaponModel()->Init();
 	GetBulletSparks()->Init();
-	GetDamageEffect()->OnInit();
+	GetHelperRecorder()->Load();
 }
 
 auto CPluginSenseClient::OnDestroy() -> void
@@ -81,7 +82,6 @@ auto CPluginSenseClient::OnFireEventClientSide( IGameEvent* pGameEvent ) -> void
 	// Hitlog + Fortnite damage indicator
 	if ( _strcmpi( pGameEvent->GetName(), XorStr( "player_hurt" ) ) == 0 )
 	{
-		GetDamageEffect()->OnPlayerHurt( pGameEvent );
 		GetFortniteDamage()->OnPlayerHurt( pGameEvent );
 
 		if ( menu_state::damageLogEnabled )
@@ -176,28 +176,28 @@ auto CPluginSenseClient::OnRender() -> void
 	GetNameChanger()->OnFrame();
 	GetChatSpammer()->OnFrame();
 
+	GetFontManager()->FirstInitFonts();
+
+	// 游戏内 HUD:统一画背景层(CRender::GetHudDrawList),并在菜单之前绘制,
+	// 保证菜单始终在顶层(同层最后绘制 = 最上层)。
+	if ( SDK::Interfaces::EngineToClient()->IsInGame()
+		&& GetCL_Players()->GetLocalPlayerController()
+		&& GetCL_Players()->GetLocalPlayerPawn() )
+	{
+		GetRenderStackSystem()->OnRenderStack();
+		GetFortniteDamage()->OnRender( CRender::GetHudDrawList() );
+		int w, h;
+		SDK::Interfaces::EngineToClient()->GetScreenSize( w, h );
+		GetVelocityDisplay()->OnRender( CRender::GetHudDrawList(), w, h );
+		GetMotionCamera()->on_render( CRender::GetHudDrawList(), w, h );
+		GetHelper()->OnRender( CRender::GetHudDrawList(), w, h );
+	}
+
+	// 菜单最后绘制,置于所有 HUD 之上
 	if ( GetPluginSenseGUI()->IsVisible() )
 		GetPluginSenseMenu()->OnRenderMenu();
 	else
 		GetPluginSenseMenu()->OnRenderWidgets();
-
-	GetFontManager()->FirstInitFonts();
-
-	if ( !SDK::Interfaces::EngineToClient()->IsInGame() )
-		return;
-
-	if ( !GetCL_Players()->GetLocalPlayerController() || !GetCL_Players()->GetLocalPlayerPawn() )
-		return;
-
-	{
-		GetRenderStackSystem()->OnRenderStack();
-		GetFortniteDamage()->OnRender( ImGui::GetForegroundDrawList() );
-		int w, h;
-		SDK::Interfaces::EngineToClient()->GetScreenSize( w, h );
-		GetVelocityDisplay()->OnRender( ImGui::GetForegroundDrawList(), w, h );
-		GetMotionCamera()->on_render( ImGui::GetForegroundDrawList(), w, h );
-		GetHelper()->OnRender( ImGui::GetForegroundDrawList(), w, h );
-	}
 }
 
 auto CPluginSenseClient::OnClientOutput() -> void

@@ -57,15 +57,18 @@ namespace framework
 		float max_scroll = std::max(0.f, total_height - visible_height);
 
 		bool listbox_hovered = g_input->mouse_in_region(m_pos + position, math::c_vector_2d(m_child_size, height));
-		float scroll_delta = g_input->get_wheel_value();
 
 		if (listbox_hovered && m_visible && g_ctx->m_open && max_scroll > 0.f && g_ctx->top_focus() == nullptr)
 		{
 			float scroll_speed = 40.f;
 			float scroll_delta = g_input->get_wheel_value();
+
 			m_scroll_target -= scroll_delta * scroll_speed;
-			m_scroll_target = std::clamp(m_scroll_target, 0.f, max_scroll);
 		}
+
+		// 列表项删除/变短后 max_scroll 会缩小,这里每帧 clamp 一次,
+		// 保证滚动不会停在越界位置(否则第一行被裁剪出可视区看不到)
+		m_scroll_target = std::clamp(m_scroll_target, 0.f, max_scroll);
 
 		float lerp_speed_scroll = 0.15f;
 		m_scroll_offset += (m_scroll_target - m_scroll_offset) * lerp_speed_scroll;
