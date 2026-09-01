@@ -75,13 +75,14 @@ static const char* _Iniuria_us[] = {
 	"   URIA.US","\tRIA.US","\t IA.US","\t  A.US","\t   .US","\t\tUS","\t\t S"
 };
 static const char* _Gamesense_pub[] = {
-	"                  ","                 g","                ga","               gam",
-	"              game","             games","            gamese","           gamesen",
-	"          gamesens","         gamesense","        gamesense ","       gamesense  ",
-	"      gamesense   ","     gamesense    ","    gamesense     ","   gamesense      ",
-	"  gamesense       "," gamesense        ","gamesense         ","amesense          ",
-	"mesense           ","esense            ","sense             ","sens              ",
-	"sen               ","se                ","s                 "
+	"sense          ","ense           ","nse            ","se             ",
+	"e              ","               ","             ga","            gam",
+	"           game","          games","         gamese","        gamesen",
+	"       gamesens","      gamesense","      gamesense","     gamesense ",
+	"     gamesense ","    gamesense  ","    gamesense  ","   gamesense   ",
+	"   gamesense   ","  gamesense    ","  gamesense    "," gamesense     ",
+	" gamesense     ","gamesense      ","gamesense      ","amesense       ",
+	"mesense        ","esense         "
 };
 static const char* _Nixware_cc[] = {
 	"\t\t\t  n","\t\t\t ni","\t\t\tnix","\t\t   nixw","\t\t  nixwa",

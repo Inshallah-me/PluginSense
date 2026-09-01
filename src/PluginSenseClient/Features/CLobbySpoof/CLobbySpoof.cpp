@@ -9,11 +9,11 @@
 // ============================================================================
 // 大厅资料伪装(C++ 原生 hook)
 //
-// 数据源(已在 client.dll 当前版本验证,2026-08):
-//   GetRankData(sub_180FF8B40)         : 段位数值 + 胜场。out 低 32 位 = ranking,高 32 位 = wins。
+// 数据源(已在 client.dll 当前版本验证,2026-09-01):
+//   GetRankData(sub_180FF8710)       : 段位数值 + 胜场。out 低 32 位 = ranking,高 32 位 = wins。
 //                                        mode: 11 = Premier, 7 = Wingman。
-//   GetCurrentLevel(sub_180FEED00)     : 经验等级(GetFriendLevel/GetFriendXp 自己时都调用它)。
-//   dword_1823DDA84 / dword_1823DDA88  : level / xppts 全局(由 flag 0x2000 / 0x4000 门控),
+//   GetCurrentLevel(sub_180FEE8D0)   : 经验等级(GetFriendLevel/GetFriendXp 自己时都调用它)。
+//   dword_1823DCA74 / dword_1823DCA78  : level / xppts 全局(由 flag 0x2000 / 0x4000 门控),
 //                                        Game::SetPlayerRanking 广播时直接读取。
 // ============================================================================
 
@@ -43,13 +43,13 @@ namespace
 	static const char* kWinsByModeReturnPattern =
 		"48 69 C1 88 00 00 00 42 8B 44 18 58 48 83 C4 60 5D C3";
 
-	// ------------------------------------------------------------------ 全局偏移(client.dll RVA,2026-08-27 更新,IDA 实测)
-	// dword_1823DC9E0 : profile 状态 flags(bit13=level 有效, bit14=xppts 有效)
-	// dword_1823DCA84  : level 值
-	// dword_1823DCA88  : xppts 值
-	static constexpr uintptr_t OFF_PROFILE_FLAGS = 0x23DC9E0;
-	static constexpr uintptr_t OFF_LEVEL_VALUE = 0x23DCA84;
-	static constexpr uintptr_t OFF_XP_VALUE = 0x23DCA88;
+	// ------------------------------------------------------------------ 全局偏移(client.dll RVA,2026-09-01 更新,IDA 实测)
+	// dword_1823DC9D0 : profile 状态 flags(bit13=level 有效, bit14=xppts 有效)
+	// dword_1823DCA74  : level 值
+	// dword_1823DCA78  : xppts 值
+	static constexpr uintptr_t OFF_PROFILE_FLAGS = 0x23DC9D0;
+	static constexpr uintptr_t OFF_LEVEL_VALUE = 0x23DCA74;
+	static constexpr uintptr_t OFF_XP_VALUE = 0x23DCA78;
 
 	static constexpr uint32_t FLAG_LEVEL_VALID = 0x2000;
 	static constexpr uint32_t FLAG_XP_VALID = 0x4000;
@@ -121,7 +121,7 @@ namespace
 		return GetCurrentLevel_o();
 	}
 
-	// 按模式名读段位数值(sub_180FE3690)。PartyListAPI 自己 xuid 时调用,覆盖全部模式。
+	// 按模式名读段位数值(sub_180FF88D0)。PartyListAPI 自己 xuid 时调用,覆盖全部模式。
 	__int64 __fastcall hkRankByMode( __int64 a1 , __int64 a2 )
 	{
 		if ( menu_state::spoof )
@@ -136,7 +136,7 @@ namespace
 		return RankByMode_o( a1 , a2 );
 	}
 
-	// 按模式名读胜场(sub_180FE4280)。
+	// 按模式名读胜场(sub_180FF94C0)。
 	__int64 __fastcall hkWinsByMode( __int64 a1 , __int64 a2 )
 	{
 		if ( menu_state::spoof )

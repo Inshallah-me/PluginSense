@@ -23,7 +23,7 @@ namespace menu_state
 namespace
 {
 	// ------------------------------------------------------------------ 冷却类型
-	// 冷却类型(写入 qword_1823DDA74 高 32 位),决定 GetCooldownType / GetCooldownReason / CooldownIsPermanent。
+	// 冷却类型(写入 qword_1823DCA64 高 32 位),决定 GetCooldownType / GetCooldownReason / CooldownIsPermanent。
 	// 完整 1~23 与 GetCooldownReason 的 switch 对应,与 menu.cc 下拉框一一对应。
 	// 顺序与 menu.cc 下拉框一一对应(作弊→行为→比赛→伤害→其他)
 	static const int g_CooldownTypes[] =
@@ -66,13 +66,13 @@ namespace
 	static constexpr int kCooldownTimeCount = 8;
 	static constexpr int kCooldownTimeCustomIndex = 7;
 
-	// ------------------------------------------------------------------ client.dll 偏移(2026-08-27 更新,IDA 实测)
-	// dword_1823DC9E0 : flag(0x200 = 有冷却)
-	// qword_1823DCA74 : 低 32 位 = 冷却到期时间戳,高 32 位 = 冷却类型
-	// dword_1823DCA7C : VAC 封禁标志(非零 = VAC 封禁)
-	static constexpr uintptr_t OFF_COOLDOWN_FLAGS = 0x23DC9E0;
-	static constexpr uintptr_t OFF_COOLDOWN_DATA = 0x23DCA74;
-	static constexpr uintptr_t OFF_VAC_BAN = 0x23DCA7C;
+	// ------------------------------------------------------------------ client.dll 偏移(2026-09-01 更新,IDA 实测)
+	// dword_1823DC9D0 : flag(0x200 = 有冷却)
+	// qword_1823DCA64 : 低 32 位 = 冷却到期时间戳,高 32 位 = 冷却类型
+	// dword_1823DCA6C : VAC 封禁标志(非零 = VAC 封禁)
+	static constexpr uintptr_t OFF_COOLDOWN_FLAGS = 0x23DC9D0;
+	static constexpr uintptr_t OFF_COOLDOWN_DATA = 0x23DCA64;
+	static constexpr uintptr_t OFF_VAC_BAN = 0x23DCA6C;
 
 	static uint64_t g_OriginalCooldownData = 0;
 	static uint32_t g_OriginalFlags = 0;
@@ -80,7 +80,7 @@ namespace
 	static bool g_OriginalSaved = false;
 
 	// ------------------------------------------------------------------ 同步冷却 / VAC 封禁到内存
-	// 冷却:写 qword_1823DDA74 + flag;Official Ban = 类型 8 永久;VAC 封禁:写 dword_1823DDA7C。
+	// 冷却:写 qword_1823DCA64 + flag;Official Ban = 类型 8 永久;VAC 封禁:写 dword_1823DCA6C。
 	// 三者互斥:有冷却时 VAC 不显示(游戏判定),VAC/Official Ban 开启时关冷却。
 	void SyncAccountState()
 	{
