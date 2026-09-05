@@ -166,6 +166,9 @@
     <ClCompile Include="src\PluginSenseClient\Features\CWeaponModel\CWeaponModel.cpp" />
     <ClCompile Include="src\PluginSenseClient\Features\CHelper\CHelper.cpp" />
     <ClCompile Include="src\PluginSenseClient\Features\CHelper\CHelperRecorder.cpp" />
+
+    <ClCompile Include="src\PluginSenseClient\Features\CHelper\HelperTimeline.cpp" />
+    <ClCompile Include="src\PluginSenseClient\Features\CAimLock\CAimLock.cpp" />
     <ClCompile Include="src\PluginSenseClient\Assets\fortnite_digits.cpp" />
     <ClCompile Include="src\PluginSenseClient\Fonts\CFont.cpp" />
     <ClCompile Include="src\PluginSenseClient\Fonts\CFontManager.cpp" />
@@ -393,7 +396,9 @@
     <ClInclude Include="src\PluginSenseClient\Features\CWeaponModel\CWeaponModel.hpp" />
     <ClInclude Include="src\PluginSenseClient\Features\CHelper\CHelper.hpp" />
     <ClInclude Include="src\PluginSenseClient\Features\CHelper\CHelperRecorder.hpp" />
-    <ClInclude Include="src\PluginSenseClient\Features\CHelper\nade_data.hpp" />
+    <ClInclude Include="src\PluginSenseClient\Features\CHelper\NadeKinds.hpp" />
+     <ClInclude Include="src\PluginSenseClient\Features\CHelper\HelperTimeline.hpp" />
+    <ClInclude Include="src\PluginSenseClient\Features\CAimLock\CAimLock.hpp" />
     <ClInclude Include="src\PluginSenseClient\Assets\fortnite_digits.hpp" />
     <ClInclude Include="src\PluginSenseClient\Assets\FredokaOne_Regular.hpp" />
     <ClInclude Include="src\PluginSenseClient\Fonts\CFont.hpp" />

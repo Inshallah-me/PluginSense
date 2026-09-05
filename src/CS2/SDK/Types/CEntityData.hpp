@@ -317,6 +317,7 @@ public:
 	SCHEMA_OFFSET( "CCSPlayerController" , "m_pInventoryServices" , m_pInventoryServices , CCSPlayerController_InventoryServices* );
 	SCHEMA_OFFSET( "CCSPlayerController" , "m_sSanitizedPlayerName" , m_sSanitizedPlayerName , const char* );
 	SCHEMA_OFFSET( "CCSPlayerController" , "m_bPawnIsAlive" , m_bPawnIsAlive , bool );
+	SCHEMA_OFFSET( "CCSPlayerController" , "m_iPing" , m_iPing , int32 ); // 预判用(ms)
 };
 
 class CPlayer_WeaponServices : public CPlayerPawnComponent

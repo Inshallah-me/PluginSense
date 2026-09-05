@@ -7,7 +7,7 @@
 #define CONFIG_FILE					"config.json"
 
 #define CHEAT_NAME					"PluginSense CS2 Base"
-#define CHEAT_VERSION				"1.4"
+#define CHEAT_VERSION				"1.6"
 
 // Project Buid Config:
 

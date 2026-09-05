@@ -14,6 +14,7 @@
 #include <PluginSenseClient/Features/CWeaponModel/CWeaponModel.hpp>
 #include <PluginSenseClient/Features/CHelper/CHelper.hpp>
 #include <PluginSenseClient/Features/CHelper/CHelperRecorder.hpp>
+#include <PluginSenseClient/Features/CAimLock/CAimLock.hpp> // aimbot 键 extern(g_aimbot_key/g_override_key)权威声明
 
 #define half_height 255
 #define full_height 525
@@ -44,6 +45,7 @@ namespace
 	hue::c_color g_damage_body{};
 	hue::c_color g_damage_head{};
 	hue::c_color g_sparks_color{ 173, 192, 255, 255 };
+	hue::c_color g_aimbot_fov_color{ 225, 225, 225, 125 };
 	hue::c_color g_weather_color{ 255, 255, 255, 255 };
 	hue::c_color g_crosshair_color{ 255, 255, 0, 255 };
 	hue::c_color g_menu_accent{ 157, 196, 29, 255 };
@@ -81,14 +83,16 @@ namespace
 	int g_recorder_edit_original{ -1 };
 	// 列表当前是否有有效选中项(Empty/无选中时隐藏编辑区)
 	bool g_recorder_has_valid{ false };
+	// 当前编辑点位是否为墙点(控制 After jump/Strength/武器多选的可见性)
+	bool g_recorder_edit_is_wall{ false };
+	bool g_recorder_edit_crouch{ false }; // 墙点标注:Crouch
+	bool g_recorder_edit_jump{ false };   // 墙点标注:Jump
 	std::string g_recorder_edit_name{};
-	int g_recorder_edit_run_ticks{ 0 };
-	int g_recorder_edit_after_jump{ 0 };
-	int g_recorder_edit_strength{ 0 }; // 0=满力 1=双键 2=轻抛
-	bool g_recorder_edit_crouch{ false };
-	bool g_recorder_edit_jump{ false };
-	bool g_recorder_edit_walk{ false };
-	bool g_recorder_edit_hidden{ false }; // 内置点位隐藏(勾选后 Save 即隐藏)
+	bool g_recorder_edit_hidden{ false }; // 勾选后 Save 即隐藏
+
+	// 墙点编辑:武器多选框的勾选缓冲(索引对应 CHelper::WallWeaponOptions)
+	std::array<bool, 64> g_wall_weapon_sel{}; // 上限 64 把武器,超出的选项不会显示
+	int g_wall_weapon_count{ 0 };
 
 	hue::c_color to_hue(const ImVec4& color)
 	{
@@ -142,6 +146,7 @@ namespace
 		g_damage_body = to_hue(menu_state::damageBody);
 		g_damage_head = to_hue(menu_state::damageHead);
 		g_sparks_color = to_hue(menu_state::sparksColor);
+		g_aimbot_fov_color = to_hue(menu_state::aimbotFovColor);
 		g_weather_color = to_hue(menu_state::worldWeather.color);
 		g_crosshair_color = to_hue(menu_state::worldScene.camCrosshairColor);
 
@@ -158,6 +163,7 @@ namespace
 		to_imvec4(g_damage_body, menu_state::damageBody);
 		to_imvec4(g_damage_head, menu_state::damageHead);
 		to_imvec4(g_sparks_color, menu_state::sparksColor);
+		to_imvec4(g_aimbot_fov_color, menu_state::aimbotFovColor);
 		to_imvec4(g_weather_color, menu_state::worldWeather.color);
 		to_imvec4(g_crosshair_color, menu_state::worldScene.camCrosshairColor);
 
@@ -366,6 +372,8 @@ namespace framework
 			else
 			{
 				window->prebuild_tabs([](framework::c_tab* controller) {
+					// Aimlock 为第一个 tab(默认选中)
+					controller->create_tab(ICON_FA_CROSSHAIRS, "Aimlock", { });
 					controller->create_tab(ICON_FA_VISUAL, "Visual", { });
 					controller->create_tab(ICON_FA_MODEL, "Changer", { });
 					controller->create_tab(ICON_FA_COMMENT, "Chat", { });
@@ -374,8 +382,48 @@ namespace framework
 					});
 				window->finish_tab_prebuild();
 
+				// ===== Aimlock tab(第一个 tab)=====
+				// 第一版范围:Hitbox 多选(智能最近部位)+ 预判 + 覆盖 Hitbox,无可见性/穿墙检查。
+				// 按键 palette 自带 Always/Hold/Toggle 模式选择(不加 key_only)。
+				// 全宽布局:整个 tab 占满窗口宽度。
+				window->build_child("Aimlock", framework::child_width::full, full_height, [](framework::c_child* controller) {
+					controller->attach_child("Aimlock", "", 0);
+
+					controller->add_checkbox("Enabled", &menu_state::aimbotEnabled);
+					controller->add_keybind("Aimlock key", &aimbot::g_aimbot_key)->suppress_next_keyup();
+					// Hitbox 多选:顺序必须与 CAimLock 的 kPartBones 表一致(Head/Neck/Chest/Pelvis/Feet)
+					// 勾选多个 = 智能模式:准心离哪个部位近就瞄哪个
+					controller->add_multibox("Hitbox", false, [](framework::c_multidropdown* box) {
+						box->add_selection("Head", &menu_state::aimbotPartHead);
+						box->add_selection("Neck", &menu_state::aimbotPartNeck);
+						box->add_selection("Chest", &menu_state::aimbotPartChest);
+						box->add_selection("Pelvis", &menu_state::aimbotPartPelvis);
+						box->add_selection("Feet", &menu_state::aimbotPartFeet);
+					});
+					// 覆盖 Hitbox:覆盖键激活时替换上面的正常配置(空配置 = 严格不瞄)
+					// 覆盖键:无标签纯图标 keybind,行内放在 Override hitbox 右侧
+					controller->add_multibox("Override hitbox", false, [](framework::c_multidropdown* box) {
+						box->add_selection("Head", &menu_state::aimbotOverridePartHead);
+						box->add_selection("Neck", &menu_state::aimbotOverridePartNeck);
+						box->add_selection("Chest", &menu_state::aimbotOverridePartChest);
+						box->add_selection("Pelvis", &menu_state::aimbotOverridePartPelvis);
+						box->add_selection("Feet", &menu_state::aimbotOverridePartFeet);
+					});
+					controller->add_keybind("", &aimbot::g_override_key, true)->suppress_next_keyup()->set_inlined();
+					controller->add_slider_int("Fov", &menu_state::aimbotFov, 1, 45);
+					controller->add_checkbox("Draw fov", &menu_state::aimbotDrawFov);
+					auto fov_color = controller->add_colorpicker("Fov color", &g_aimbot_fov_color);
+					fov_color->set_inlined();
+					fov_color->set_callback_visibility([] { return menu_state::aimbotDrawFov; });
+					controller->add_slider_int("Smoothing", &menu_state::aimbotSmoothing, 0, 50);
+					// 锁定时间(ms):0 = 无限锁(不因时间松手);>0 = 单个目标锁满该时长后停手,
+					// 换目标 / 目标失焦后再重新获得才重新计时
+					controller->add_slider_int("Lock time", &menu_state::aimbotLockTime, 0, 5000, false, L"ms");
+					controller->add_checkbox("Predictive", &menu_state::aimbotPredictive);
+				});
+
 				window->build_child("World", framework::child_width::half, half_height, [](framework::c_child* controller) {
-					controller->attach_child("Visual", "", 0);
+					controller->attach_child("Visual", "", 1);
 
 					// ---- Weather ----
 					controller->add_checkbox("Weather", &menu_state::worldWeather.enabled);
@@ -429,7 +477,7 @@ namespace framework
 				});
 
 				window->build_child("Velocity", framework::child_width::half, half_height, [](framework::c_child* controller) {
-					controller->attach_child("Visual", "", 0);
+					controller->attach_child("Visual", "", 1);
 
 					controller->add_slider_float("Offset", &menu_state::velocityOffset, 30.f, 250.f, false, L"px");
 					controller->add_checkbox("Velocity text", &menu_state::velocityText);
@@ -446,7 +494,7 @@ namespace framework
 				});
 
 				window->build_child("Weapon Model", framework::child_width::half, full_height, [](framework::c_child* controller) {
-					controller->attach_child("Changer", "", 1);
+					controller->attach_child("Changer", "", 2);
 
 					controller->add_checkbox("Enabled", &menu_state::weaponModelEnabled);
 
@@ -472,7 +520,7 @@ namespace framework
 				});
 
 				window->build_child("Name Changer", framework::child_width::half, full_height, [](framework::c_child* controller) {
-					controller->attach_child("Changer", "", 1);
+					controller->attach_child("Changer", "", 2);
 
 					controller->add_checkbox("Enabled", &menu_state::clantagEnabled);
 					controller->add_dropdown("Preset", &menu_state::clantagSelection, build_clantag_presets())
@@ -499,7 +547,7 @@ namespace framework
 				});
 
 				window->build_child("Other", framework::child_width::half, full_height, [](framework::c_child* controller) {
-					controller->attach_child("Visual", "", 0);
+					controller->attach_child("Visual", "", 1);
 
 					controller->add_checkbox("Fortnite damage", &menu_state::damageIndicator);
 					auto damage_settings = controller->add_popup("Fortnite damage", true, [](framework::c_popup* popup) {
@@ -594,7 +642,7 @@ namespace framework
 				});
 
 				window->build_child("Chat spammer", framework::child_width::half, full_height, [](framework::c_child* controller) {
-					controller->attach_child("Chat", "", 2);
+					controller->attach_child("Chat", "", 3);
 
 					controller->add_checkbox("Enabled", &menu_state::chatSpammer);
 					auto chat_settings = controller->add_popup("Settings", true, [](framework::c_popup* popup) {
@@ -622,7 +670,7 @@ namespace framework
 				});
 
 				window->build_child("Kill say", framework::child_width::half, full_height, [](framework::c_child* controller) {
-					controller->attach_child("Chat", "", 2);
+					controller->attach_child("Chat", "", 3);
 
 					controller->add_checkbox("Enabled", &menu_state::killSay);
 					auto kill_settings = controller->add_popup("Settings", true, [](framework::c_popup* popup) {
@@ -649,7 +697,7 @@ namespace framework
 				});
 
 				window->build_child("Settings", framework::child_width::half, full_height, [](framework::c_child* controller) {
-					controller->attach_child("Config", "", 4);
+					controller->attach_child("Config", "", 5);
 
 					controller->add_listbox("Config list", &g_config_index, g_config_items, 180)
 						->execute_stack([] { return g_config_items; });
@@ -695,7 +743,7 @@ namespace framework
 				});
 
 				window->build_child("Menu", framework::child_width::half, full_height, [](framework::c_child* controller) {
-					controller->attach_child("Config", "", 4);
+					controller->attach_child("Config", "", 5);
 
 					controller->add_keybind("Menu Key", &g_menu_key)->key_only()->keyboard_only()->suppress_next_keyup();
 					controller->add_colorpicker("Menu color", &g_menu_accent);
@@ -706,13 +754,14 @@ namespace framework
 				});
 
 				window->build_child("Helper Beta", framework::child_width::half, full_height, [](framework::c_child* controller) {
-					controller->attach_child("Utility", "", 3);
+					controller->attach_child("Utility", "", 4);
 
 					controller->add_checkbox("Enabled", &menu_state::helperEnabled);
 					controller->add_keybind("Helper key", &helper::g_helper_key)->key_only()->suppress_next_keyup();
 					controller->add_checkbox("Auto move", &menu_state::autoMove);
 					controller->add_checkbox("Aim assist", &menu_state::autoAim);
 					controller->add_checkbox("Auto release", &menu_state::autoExecute);
+					controller->add_checkbox("Grenade preview", &menu_state::grenadePreview);
 					controller->add_slider_int("Aim smoothing", &menu_state::aimSpeed, 1, 30);
 					controller->add_slider_float("Aim threshold", &menu_state::aimThreshold, 0.05f, 3.f, false, L"\u00B0");
 					controller->add_slider_int("Lock time", &menu_state::lockTimeMs, 0, 250, false, L"ms");
@@ -721,12 +770,11 @@ namespace framework
 					controller->add_slider_float("Stand radius", &menu_state::standRadius, 1.f, 100.f, false, L"u");
 					controller->add_slider_float("Release radius", &menu_state::releaseRadius, 1.f, 20.f, false, L"u");
 					controller->add_slider_float("Height tolerance", &menu_state::heightTolerance, 1.f, 32.f, false, L"u");
-					controller->add_checkbox("Show action", &menu_state::showAction);
 					controller->add_checkbox("Show distance", &menu_state::showDistance);
 				});
 
 				window->build_child("Keys & Recorder", framework::child_width::half, full_height, [](framework::c_child* controller) {
-					controller->attach_child("Utility", "", 3);
+					controller->attach_child("Utility", "", 4);
 
 					// 页面切换:Keys / Recorder(默认 Keys)
 					controller->add_dropdown("Page", &g_helper_page, { "Keys", "Recorder" });
@@ -753,7 +801,7 @@ namespace framework
 					controller->add_dropdown("Source", &g_recorder_source, { "My lineups", "Builtin" })->set_callback_visibility([] { return g_helper_page == 1; });
 
 					// 点位类型筛选(我的点位 / 内置点位都可用)
-					controller->add_dropdown("Kind", &g_recorder_kind_filter, { "All", "Smoke", "Flash", "Molotov", "HE", "Decoy" })
+					controller->add_dropdown("Kind", &g_recorder_kind_filter, { "All", "Smoke", "Flash", "Molotov", "HE", "Decoy", "Wallbang" })
 						->set_callback_visibility([] { return g_helper_page == 1; });
 
 					// 当前地图点位列表(索引对齐列表顺序)
@@ -776,7 +824,8 @@ namespace framework
 								if (g_recorder_source == 1)
 								{
 									ok = GetHelper()->GetBuiltinItem(g_recorder_index, kindFilter, lu);
-									if (ok) g_recorder_edit_original = lu.override_builtin_index;
+									// original = 点位库 id(Save 隐藏覆盖 / Remove 恢复用)
+									g_recorder_edit_original = ok ? lu.builtin_id : -1;
 								}
 								else
 								{
@@ -790,14 +839,20 @@ namespace framework
 									g_recorder_edit_source = g_recorder_source;
 									g_recorder_edit_kind = g_recorder_kind_filter;
 									g_recorder_edit_name = lu.name;
-									g_recorder_edit_run_ticks = lu.run_ticks;
-									g_recorder_edit_after_jump = lu.after_jump_ticks;
-									g_recorder_edit_strength = lu.throw_strength >= 0.75f ? 0
-										: (lu.throw_strength >= 0.25f ? 1 : 2);
-									g_recorder_edit_crouch = (lu.actions & resources::nades::action_crouch) != 0;
-									g_recorder_edit_jump = (lu.actions & resources::nades::action_jump) != 0;
-									g_recorder_edit_walk = (lu.actions & resources::nades::action_walk) != 0;
 									g_recorder_edit_hidden = lu.hidden;
+
+									// 墙点:标记类型 + 解析武器多选勾选 + 蹲/跳标注
+									g_recorder_edit_is_wall = lu.kind
+										== static_cast<std::uint8_t>(resources::nades::kind::wallbang);
+									g_recorder_edit_crouch = (lu.annotations & resources::nades::action_crouch) != 0;
+									g_recorder_edit_jump = (lu.annotations & resources::nades::action_jump) != 0;
+									g_wall_weapon_sel.fill(false);
+									const auto& wallOpts = CHelper::WallWeaponOptions();
+									g_wall_weapon_count = static_cast<int>(wallOpts.size());
+									std::vector<bool> sel;
+									CHelper::ParseWallWeapons(lu.weapon, sel);
+									for (std::size_t i = 0; i < sel.size() && i < g_wall_weapon_sel.size(); ++i)
+										g_wall_weapon_sel[i] = sel[i];
 								}
 								else
 									g_recorder_edit_index = -1;
@@ -813,12 +868,17 @@ namespace framework
 
 					// ---- 点位编辑(选中后修改参数,Save 写回 JSON;无有效选中时隐藏)----
 					controller->add_input_box("Name", &g_recorder_edit_name)->set_callback_visibility([] { return g_helper_page == 1 && g_recorder_has_valid; });
-					controller->add_slider_int("Run ticks", &g_recorder_edit_run_ticks, 0, 250, false, L"t")->set_callback_visibility([] { return g_helper_page == 1 && g_recorder_has_valid; });
-					controller->add_slider_int("After jump", &g_recorder_edit_after_jump, 0, 32, false, L"t")->set_callback_visibility([] { return g_helper_page == 1 && g_recorder_has_valid; });
-					controller->add_dropdown("Strength", &g_recorder_edit_strength, { "Left (full)", "Both (mid)", "Right (soft)" })->set_callback_visibility([] { return g_helper_page == 1 && g_recorder_has_valid; });
-					controller->add_checkbox("Crouch", &g_recorder_edit_crouch)->set_callback_visibility([] { return g_helper_page == 1 && g_recorder_has_valid; });
-					controller->add_checkbox("Jump", &g_recorder_edit_jump)->set_callback_visibility([] { return g_helper_page == 1 && g_recorder_has_valid; });
-					controller->add_checkbox("Walk", &g_recorder_edit_walk)->set_callback_visibility([] { return g_helper_page == 1 && g_recorder_has_valid; });
+					// 墙点武器多选(仅在墙点显示;紧跟 Name,行前带 esp 武器图标,列表限高滚动)
+					controller->add_multibox("Weapons", false, [](framework::c_multidropdown* box) {
+						const auto& opts = CHelper::WallWeaponOptions();
+						for (std::size_t i = 0; i < opts.size() && i < g_wall_weapon_sel.size(); ++i)
+							box->add_selection(opts[i].display, &g_wall_weapon_sel[i]);
+					})->icon_stack([] { return CHelper::WallWeaponIcons(); })
+						->set_callback_visibility([] { return g_helper_page == 1 && g_recorder_has_valid && g_recorder_edit_is_wall; });
+					// 墙点标注:Crouch/Jump(仅提示用途,执行端不注入)
+					controller->add_checkbox("Crouch", &g_recorder_edit_crouch)->set_callback_visibility([] { return g_helper_page == 1 && g_recorder_has_valid && g_recorder_edit_is_wall; });
+					controller->add_checkbox("Jump", &g_recorder_edit_jump)->set_callback_visibility([] { return g_helper_page == 1 && g_recorder_has_valid && g_recorder_edit_is_wall; });
+					// 时间线点位无可调参数(逐帧录制),仅名称/隐藏/传送
 					// 隐藏点位:两种来源都可用;勾选后 Save 即隐藏(不显示不参与)
 					controller->add_checkbox("Hide", &g_recorder_edit_hidden)
 						->set_callback_visibility([] { return g_helper_page == 1 && g_recorder_has_valid; });
@@ -856,32 +916,26 @@ namespace framework
 								ok = g_recorder_edit_original >= 0
 									&& GetHelper()->GetRecorderItem(g_recorder_edit_original, lu);
 							if (!ok) return;
+							// 时间线点位没有可调参数:仅名称/隐藏可改(帧序列原样保留)
 							lu.name = g_recorder_edit_name;
-							lu.run_ticks = static_cast<std::uint16_t>(std::max(0, g_recorder_edit_run_ticks));
-							lu.after_jump_ticks = static_cast<std::uint8_t>(std::max(0, g_recorder_edit_after_jump));
-							lu.throw_strength = g_recorder_edit_strength == 0 ? 1.f
-								: (g_recorder_edit_strength == 1 ? 0.5f : 0.f);
-							lu.actions = 0;
-							if (g_recorder_edit_crouch) lu.actions |= resources::nades::action_crouch;
-							if (lu.run_ticks > 0) lu.actions |= resources::nades::action_run;
-							if (g_recorder_edit_walk && lu.run_ticks > 0) lu.actions |= resources::nades::action_walk;
-							if (g_recorder_edit_jump) lu.actions |= resources::nades::action_jump;
-							// 同步重建动作标签,列表/执行处显示与 actions 一致
-							lu.action = CHelperRecorder::BuildActionLabel(lu.actions);
+							if (lu.kind == static_cast<std::uint8_t>(resources::nades::kind::wallbang))
+							{
+								// 墙点:武器多选写回(勾选集合 → 逗号串)+ 蹲/跳标注
+								std::vector<bool> sel(g_wall_weapon_sel.begin(), g_wall_weapon_sel.end());
+								lu.weapon = CHelper::BuildWallWeapons(sel);
+								lu.annotations = 0;
+								if (g_recorder_edit_crouch) lu.annotations |= resources::nades::action_crouch;
+								if (g_recorder_edit_jump) lu.annotations |= resources::nades::action_jump;
+							}
 							if (g_recorder_source == 1)
 							{
-								// 内置点位:保存为覆盖条目(替代内置原条目;勾选 Hide 则隐藏)
-								// lu.override_builtin_index 在载入时已设为内置原始索引
-								const int builtinIndex = lu.override_builtin_index;
-								lu.override_builtin_index = builtinIndex;
+								// 内置时间线点位:仅隐藏覆盖可写
 								lu.hidden = g_recorder_edit_hidden;
-								GetHelper()->SaveBuiltinOverride(builtinIndex, lu);
+								GetHelper()->SaveBuiltinOverride(g_recorder_edit_original, lu);
+								return;
 							}
-							else
-							{
-								lu.hidden = g_recorder_edit_hidden;
-								GetHelper()->UpdateRecorderItem(g_recorder_edit_original, lu);
-							}
+							lu.hidden = g_recorder_edit_hidden;
+							GetHelper()->UpdateRecorderItem(g_recorder_edit_original, lu);
 						});
 						save_btn->set_callback_visibility([] { return g_helper_page == 1 && g_recorder_has_valid; });
 					}
@@ -899,6 +953,7 @@ namespace framework
 							g_recorder_edit_index = -1;
 							g_recorder_edit_source = -1;
 							g_recorder_edit_kind = -1;
+							g_recorder_edit_is_wall = false;
 						});
 						remove_btn->set_inlined();
 						remove_btn->set_callback_visibility([] { return g_helper_page == 1 && g_recorder_has_valid; });
@@ -954,6 +1009,8 @@ namespace framework
 
 		std::vector<framework::keybind_entry_t> entries;
 		add_menu_keybind(entries);
+		add_active_keybind(entries, "Aimlock", aimbot::g_aimbot_key);
+		add_active_keybind(entries, "Override hitbox", aimbot::g_override_key);
 		add_active_keybind(entries, "Helper", helper::g_helper_key);
 		add_active_keybind(entries, "Recorder", helper::g_record_key);
 		this->m_widgets->keybind_manager()->update_keybinds(entries);
@@ -983,4 +1040,15 @@ namespace helper
 	framework::key_var_t g_move_jump{ VK_SPACE , framework::key_mode_t::hold };
 	framework::key_var_t g_attack_key{ VK_LBUTTON , framework::key_mode_t::hold };
 	framework::key_var_t g_attack2_key{ VK_RBUTTON , framework::key_mode_t::hold };
+}
+
+// ============================================================================
+// aimbot 热键(UI 与 aimlock 功能共享)
+// 主键默认不绑(避免误触),用户在 palette/Keybinds 里绑定;模式默认 Hold
+// ============================================================================
+namespace aimbot
+{
+	framework::key_var_t g_aimbot_key{}; // 默认不绑键,用户自行绑定(对齐 helper 主键惯例)
+	// 覆盖 Hitbox 键:默认不绑(不激活 = 正常模式),默认 Toggle
+	framework::key_var_t g_override_key{ 0 , framework::key_mode_t::toggle };
 }

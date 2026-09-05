@@ -152,11 +152,6 @@ namespace framework
 
 		static math::c_vector_2d prev_mouse_pos{}, delta{};
 
-		const float screen_w = static_cast<float>(core::g_overlay->width);
-		const float screen_h = static_cast<float>(core::g_overlay->height);
-		this->m_pos.x = std::clamp(this->m_pos.x, 0.f, std::max(0.f, screen_w - this->m_size.x));
-		this->m_pos.y = std::clamp(this->m_pos.y, 0.f, std::max(0.f, screen_h - this->m_size.y));
-
 		math::c_rect title_bounding = math::c_rect(this->m_pos.x, this->m_pos.y, this->m_size.x - 44.f, 45.f);
 
 		delta = prev_mouse_pos - g_input->get_mouse_position();
@@ -169,8 +164,6 @@ namespace framework
 		else if (g_ctx->m_dragging && g_input->click_down(input::mouse_buttons::left))
 		{
 			this->m_pos -= delta;
-			this->m_pos.x = std::clamp(this->m_pos.x, 0.f, std::max(0.f, screen_w - this->m_size.x));
-			this->m_pos.y = std::clamp(this->m_pos.y, 0.f, std::max(0.f, screen_h - this->m_size.y));
 		}
 		else if (g_ctx->m_dragging && !g_input->click_down(input::mouse_buttons::left))
 		{

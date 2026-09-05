@@ -25,6 +25,12 @@ namespace helper
 	extern framework::key_var_t g_attack2_key;
 }
 
+namespace aimbot
+{
+	extern framework::key_var_t g_aimbot_key;
+	extern framework::key_var_t g_override_key;
+}
+
 static CSettingsJson g_CSettingsJson{};
 
 auto CSettingsJson::LoadConfig( const std::string& JsonFile ) -> void
@@ -81,8 +87,32 @@ auto CSettingsJson::LoadConfig( const std::string& JsonFile ) -> void
 		GetFloatJson( SettingsJson , "stand_radius" , menu_state::standRadius , 1.f , 100.f );
 		GetFloatJson( SettingsJson , "release_radius" , menu_state::releaseRadius , 1.f , 20.f );
 		GetFloatJson( SettingsJson , "height_tolerance" , menu_state::heightTolerance , 1.f , 32.f );
-		GetBoolJson( SettingsJson , "show_action" , menu_state::showAction );
+		GetBoolJson( SettingsJson , "grenade_preview" , menu_state::grenadePreview );
 		GetBoolJson( SettingsJson , "show_distance" , menu_state::showDistance );
+
+		// aimbot(aimlock)热键(默认不绑,0 = 无效键)
+		GetIntJson( SettingsJson , "aimbot_key" , aimbot::g_aimbot_key.key , 0 , 255 );
+		GetIntJson( SettingsJson , "aimbot_override_key" , aimbot::g_override_key.key , 0 , 255 );
+
+		// aimbot(aimlock)配置
+		GetBoolJson( SettingsJson , "aimbot_enabled" , menu_state::aimbotEnabled );
+		GetBoolJson( SettingsJson , "aimbot_part_head" , menu_state::aimbotPartHead );
+		GetBoolJson( SettingsJson , "aimbot_part_neck" , menu_state::aimbotPartNeck );
+		GetBoolJson( SettingsJson , "aimbot_part_chest" , menu_state::aimbotPartChest );
+		GetBoolJson( SettingsJson , "aimbot_part_pelvis" , menu_state::aimbotPartPelvis );
+		GetBoolJson( SettingsJson , "aimbot_part_feet" , menu_state::aimbotPartFeet );
+		GetBoolJson( SettingsJson , "aimbot_override_part_head" , menu_state::aimbotOverridePartHead );
+		GetBoolJson( SettingsJson , "aimbot_override_part_neck" , menu_state::aimbotOverridePartNeck );
+		GetBoolJson( SettingsJson , "aimbot_override_part_chest" , menu_state::aimbotOverridePartChest );
+		GetBoolJson( SettingsJson , "aimbot_override_part_pelvis" , menu_state::aimbotOverridePartPelvis );
+		GetBoolJson( SettingsJson , "aimbot_override_part_feet" , menu_state::aimbotOverridePartFeet );
+		GetIntJson( SettingsJson , "aimbot_fov" , menu_state::aimbotFov , 1 , 45 );
+		GetIntJson( SettingsJson , "aimbot_smoothing" , menu_state::aimbotSmoothing , 0 , 50 );
+		GetIntJson( SettingsJson , "aimbot_lock_time" , menu_state::aimbotLockTime , 0 , 5000 );
+		GetBoolJson( SettingsJson , "aimbot_predictive" , menu_state::aimbotPredictive );
+		GetBoolJson( SettingsJson , "aimbot_draw_fov" , menu_state::aimbotDrawFov );
+		GetColorJson( SettingsJson , "aimbot_fov_color" , &menu_state::aimbotFovColor.x );
+
 		GetIntJson( SettingsJson , "menu_animation_speed" , vars::menuAnimSpeed , 0 , 100 );
 		GetColorJson( SettingsJson , "menu_accent" , vars::colorAccent );
 		GetIntJson( SettingsJson , "menu_outline_alpha" , style::outlineAlpha , 0 , 255 );
@@ -108,6 +138,7 @@ auto CSettingsJson::LoadConfig( const std::string& JsonFile ) -> void
 		GetBoolJson( SettingsJson, "damage_indicator", menu_state::damageIndicator );
 		GetColorJson( SettingsJson, "velocity_low", &menu_state::lowSpeed.x ); GetColorJson( SettingsJson, "velocity_mid", &menu_state::midSpeed.x ); GetColorJson( SettingsJson, "velocity_high", &menu_state::highSpeed.x );
 		GetColorJson( SettingsJson, "velocity_graph_color", &menu_state::graphColor.x ); GetColorJson( SettingsJson, "damage_body", &menu_state::damageBody.x ); GetColorJson( SettingsJson, "damage_head", &menu_state::damageHead.x );
+		GetBoolJson( SettingsJson, "bullet_sparks", menu_state::bulletSparks ); GetColorJson( SettingsJson, "sparks_color", &menu_state::sparksColor.x );
 			// World visuals
 			GetBoolJson( SettingsJson, "dof", menu_state::worldScene.dof );
 			GetBoolJson( SettingsJson, "dof_focus", menu_state::worldScene.dofFocus );
@@ -139,7 +170,7 @@ auto CSettingsJson::LoadConfig( const std::string& JsonFile ) -> void
 			GetFloatJson( SettingsJson, "wetness_speed", menu_state::worldWeather.wetnessSpeed, 0.1f, 3.f );
 		GetFloatJson( SettingsJson, "damage_scale", menu_state::damageScale, .25f, 2.f ); GetFloatJson( SettingsJson, "damage_time", menu_state::damageTime, 1.f, 10.f );
 		GetBoolJson( SettingsJson, "spoof_enabled", menu_state::spoof ); GetBoolJson( SettingsJson, "cooldown_enabled", menu_state::fakeCooldown ); GetBoolJson( SettingsJson, "official_ban", menu_state::officialBan ); GetBoolJson( SettingsJson, "vac_ban", menu_state::vacBan ); GetIntJson( SettingsJson, "cooldown_type", menu_state::fakeCooldownValue, 0, 19 ); GetIntJson( SettingsJson, "cooldown_time", menu_state::fakeCooldownTime, 0, 7 ); GetIntJson( SettingsJson, "cooldown_custom_days", menu_state::fakeCooldownCustomDays, 1, 9999 );
-		GetBoolJson( SettingsJson, "lobby_premier", menu_state::lobbyPremier ); GetIntJson( SettingsJson, "lobby_premier_rating", menu_state::lobbyPremierRating, 0, 99999 ); GetIntJson( SettingsJson, "lobby_premier_wins", menu_state::lobbyPremierWins, 0, 9999 ); GetBoolJson( SettingsJson, "lobby_wingman", menu_state::lobbyWingman ); GetIntJson( SettingsJson, "lobby_wingman_rating", menu_state::lobbyWingmanRating, 0, 99999 ); GetIntJson( SettingsJson, "lobby_wingman_wins", menu_state::lobbyWingmanWins, 0, 9999 ); GetBoolJson( SettingsJson, "lobby_level", menu_state::lobbyLevel ); GetIntJson( SettingsJson, "lobby_level_value", menu_state::lobbyLevelValue, 0, 40 ); GetIntJson( SettingsJson, "lobby_xp", menu_state::lobbyXp, 0, 5000 );		GetBoolJson( SettingsJson, "chat_spammer", menu_state::chatSpammer ); GetBoolJson( SettingsJson, "kill_say", menu_state::killSay ); GetFloatJson( SettingsJson, "chat_delay", menu_state::sendDelay, .1f, 20.f );
+		GetBoolJson( SettingsJson, "lobby_premier", menu_state::lobbyPremier ); GetIntJson( SettingsJson, "lobby_premier_rating", menu_state::lobbyPremierRating, 0, 99999 ); GetIntJson( SettingsJson, "lobby_premier_wins", menu_state::lobbyPremierWins, 0, 9999 ); GetBoolJson( SettingsJson, "lobby_wingman", menu_state::lobbyWingman ); GetIntJson( SettingsJson, "lobby_wingman_rating", menu_state::lobbyWingmanRating, 0, 99999 ); GetIntJson( SettingsJson, "lobby_wingman_wins", menu_state::lobbyWingmanWins, 0, 9999 ); GetBoolJson( SettingsJson, "lobby_level", menu_state::lobbyLevel ); GetIntJson( SettingsJson, "lobby_level_value", menu_state::lobbyLevelValue, 0, 40 ); GetIntJson( SettingsJson, "lobby_xp", menu_state::lobbyXp, 0, 5000 );		GetBoolJson( SettingsJson, "chat_spammer", menu_state::chatSpammer ); GetBoolJson( SettingsJson, "kill_say", menu_state::killSay ); GetBoolJson( SettingsJson, "chat_spammer_random", menu_state::chatSpammerRandom ); GetBoolJson( SettingsJson, "kill_say_random", menu_state::killSayRandom ); GetFloatJson( SettingsJson, "chat_delay", menu_state::sendDelay, .1f, 20.f );
 		GetIntJson( SettingsJson, "chat_count", menu_state::chatCount, 1, 16 ); GetIntJson( SettingsJson, "kill_count", menu_state::killCount, 1, 16 );
 		for (int i = 0; i < 16; ++i) { char key[32]{}; std::snprintf(key, sizeof(key), "chat_message_%d", i); GetTextJson(SettingsJson, key, menu_state::chatMessages[i], 128); std::snprintf(key, sizeof(key), "kill_message_%d", i); GetTextJson(SettingsJson, key, menu_state::killMessages[i], 128); }
 		GetBoolJson( SettingsJson, "weapon_model_enabled", menu_state::weaponModelEnabled ); GetIntJson( SettingsJson, "weapon_model_weapon", menu_state::weaponModelWeapon, 0, 256 ); GetIntJson( SettingsJson, "weapon_model_model", menu_state::weaponModelModel, 0, 2048 );
@@ -210,8 +241,29 @@ AddIntJson( ConfigWriter , "stand_distance" , menu_state::standDistance );
 AddFloatJson( ConfigWriter , "stand_radius" , menu_state::standRadius );
 AddFloatJson( ConfigWriter , "release_radius" , menu_state::releaseRadius );
 AddFloatJson( ConfigWriter , "height_tolerance" , menu_state::heightTolerance );
-AddBoolJson( ConfigWriter , "show_action" , menu_state::showAction );
+AddBoolJson( ConfigWriter , "grenade_preview" , menu_state::grenadePreview );
 AddBoolJson( ConfigWriter , "show_distance" , menu_state::showDistance );
+// aimbot(aimlock)热键
+AddIntJson( ConfigWriter , "aimbot_key" , aimbot::g_aimbot_key.key );
+AddIntJson( ConfigWriter , "aimbot_override_key" , aimbot::g_override_key.key );
+// aimbot(aimlock)配置
+AddBoolJson( ConfigWriter , "aimbot_enabled" , menu_state::aimbotEnabled );
+AddBoolJson( ConfigWriter , "aimbot_part_head" , menu_state::aimbotPartHead );
+AddBoolJson( ConfigWriter , "aimbot_part_neck" , menu_state::aimbotPartNeck );
+AddBoolJson( ConfigWriter , "aimbot_part_chest" , menu_state::aimbotPartChest );
+AddBoolJson( ConfigWriter , "aimbot_part_pelvis" , menu_state::aimbotPartPelvis );
+AddBoolJson( ConfigWriter , "aimbot_part_feet" , menu_state::aimbotPartFeet );
+AddBoolJson( ConfigWriter , "aimbot_override_part_head" , menu_state::aimbotOverridePartHead );
+AddBoolJson( ConfigWriter , "aimbot_override_part_neck" , menu_state::aimbotOverridePartNeck );
+AddBoolJson( ConfigWriter , "aimbot_override_part_chest" , menu_state::aimbotOverridePartChest );
+AddBoolJson( ConfigWriter , "aimbot_override_part_pelvis" , menu_state::aimbotOverridePartPelvis );
+AddBoolJson( ConfigWriter , "aimbot_override_part_feet" , menu_state::aimbotOverridePartFeet );
+AddIntJson( ConfigWriter , "aimbot_fov" , menu_state::aimbotFov );
+AddIntJson( ConfigWriter , "aimbot_smoothing" , menu_state::aimbotSmoothing );
+AddIntJson( ConfigWriter , "aimbot_lock_time" , menu_state::aimbotLockTime );
+AddBoolJson( ConfigWriter , "aimbot_predictive" , menu_state::aimbotPredictive );
+AddBoolJson( ConfigWriter , "aimbot_draw_fov" , menu_state::aimbotDrawFov );
+AddColorJson( ConfigWriter , "aimbot_fov_color" , &menu_state::aimbotFovColor.x );
 AddIntJson( ConfigWriter , "menu_animation_speed" , vars::menuAnimSpeed );
 AddColorJson( ConfigWriter , "menu_accent" , vars::colorAccent );
 AddIntJson( ConfigWriter , "menu_outline_alpha" , style::outlineAlpha );
@@ -223,6 +275,7 @@ AddBoolJson(ConfigWriter, "clantag_enabled", menu_state::clantagEnabled); AddInt
 AddTextJson(ConfigWriter, "player_name", menu_state::playerName); AddTextJson(ConfigWriter, "custom_clantag", menu_state::customClantag);
 AddBoolJson(ConfigWriter, "velocity_text", menu_state::velocityText); AddBoolJson(ConfigWriter, "velocity_graph", menu_state::velocityGraph); AddBoolJson(ConfigWriter, "keystrokes", menu_state::keystrokes); AddFloatJson(ConfigWriter, "velocity_offset", menu_state::velocityOffset); AddBoolJson(ConfigWriter, "damage_log_enabled", menu_state::damageLogEnabled); AddBoolJson(ConfigWriter, "hitlog_enabled", menu_state::hitlogEnabled); AddBoolJson(ConfigWriter, "hitlog_victim", menu_state::hitlogVictim); AddIntJson(ConfigWriter, "hitlog_type", menu_state::hitlogType); AddBoolJson(ConfigWriter, "damage_indicator", menu_state::damageIndicator);
 AddColorJson(ConfigWriter, "velocity_low", &menu_state::lowSpeed.x); AddColorJson(ConfigWriter, "velocity_mid", &menu_state::midSpeed.x); AddColorJson(ConfigWriter, "velocity_high", &menu_state::highSpeed.x); AddColorJson(ConfigWriter, "velocity_graph_color", &menu_state::graphColor.x); AddColorJson(ConfigWriter, "damage_body", &menu_state::damageBody.x); AddColorJson(ConfigWriter, "damage_head", &menu_state::damageHead.x);
+		AddBoolJson(ConfigWriter, "bullet_sparks", menu_state::bulletSparks); AddColorJson(ConfigWriter, "sparks_color", &menu_state::sparksColor.x);
 // World visuals
 AddBoolJson(ConfigWriter, "dof", menu_state::worldScene.dof);
 			AddBoolJson(ConfigWriter, "dof_focus", menu_state::worldScene.dofFocus);
@@ -255,7 +308,7 @@ AddFloatJson(ConfigWriter, "wetness_speed", menu_state::worldWeather.wetnessSpee
 			AddFloatJson(ConfigWriter, "damage_scale", menu_state::damageScale); AddFloatJson(ConfigWriter, "damage_time", menu_state::damageTime);
 AddBoolJson(ConfigWriter, "spoof_enabled", menu_state::spoof); AddBoolJson(ConfigWriter, "cooldown_enabled", menu_state::fakeCooldown); AddBoolJson(ConfigWriter, "official_ban", menu_state::officialBan); AddBoolJson(ConfigWriter, "vac_ban", menu_state::vacBan); AddIntJson(ConfigWriter, "cooldown_type", menu_state::fakeCooldownValue); AddIntJson(ConfigWriter, "cooldown_time", menu_state::fakeCooldownTime); AddIntJson(ConfigWriter, "cooldown_custom_days", menu_state::fakeCooldownCustomDays);
 AddBoolJson(ConfigWriter, "lobby_premier", menu_state::lobbyPremier); AddIntJson(ConfigWriter, "lobby_premier_rating", menu_state::lobbyPremierRating); AddIntJson(ConfigWriter, "lobby_premier_wins", menu_state::lobbyPremierWins); AddBoolJson(ConfigWriter, "lobby_wingman", menu_state::lobbyWingman); AddIntJson(ConfigWriter, "lobby_wingman_rating", menu_state::lobbyWingmanRating); AddIntJson(ConfigWriter, "lobby_wingman_wins", menu_state::lobbyWingmanWins); AddBoolJson(ConfigWriter, "lobby_level", menu_state::lobbyLevel); AddIntJson(ConfigWriter, "lobby_level_value", menu_state::lobbyLevelValue); AddIntJson(ConfigWriter, "lobby_xp", menu_state::lobbyXp);
-AddBoolJson(ConfigWriter, "chat_spammer", menu_state::chatSpammer); AddBoolJson(ConfigWriter, "kill_say", menu_state::killSay); AddFloatJson(ConfigWriter, "chat_delay", menu_state::sendDelay); AddIntJson(ConfigWriter, "chat_count", menu_state::chatCount); AddIntJson(ConfigWriter, "kill_count", menu_state::killCount);
+AddBoolJson(ConfigWriter, "chat_spammer", menu_state::chatSpammer); AddBoolJson(ConfigWriter, "kill_say", menu_state::killSay); AddBoolJson(ConfigWriter, "chat_spammer_random", menu_state::chatSpammerRandom); AddBoolJson(ConfigWriter, "kill_say_random", menu_state::killSayRandom); AddFloatJson(ConfigWriter, "chat_delay", menu_state::sendDelay); AddIntJson(ConfigWriter, "chat_count", menu_state::chatCount); AddIntJson(ConfigWriter, "kill_count", menu_state::killCount);
 for (int i = 0; i < 16; ++i) { char key[32]{}; std::snprintf(key, sizeof(key), "chat_message_%d", i); AddTextJson(ConfigWriter, key, menu_state::chatMessages[i]); std::snprintf(key, sizeof(key), "kill_message_%d", i); AddTextJson(ConfigWriter, key, menu_state::killMessages[i]); }
 AddBoolJson(ConfigWriter, "weapon_model_enabled", menu_state::weaponModelEnabled); AddIntJson(ConfigWriter, "weapon_model_weapon", menu_state::weaponModelWeapon); AddIntJson(ConfigWriter, "weapon_model_model", menu_state::weaponModelModel);
 // 每把武器的模型路径(配置持久化)

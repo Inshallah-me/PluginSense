@@ -78,6 +78,8 @@ namespace SDK
 		static auto GetFirstCUserCmdArray() -> CUserCmd**;
 		static auto ParticleManager() -> void*;
 		static auto GameRules() -> void*;
+		// 实体表基址(dwEntityList,签名解析;vesta 同款方案)
+		static auto EntityList() -> void*;
 
 	private:
 		static CGlobalVarsBase** g_ppCGlobalVarsBase;
@@ -85,5 +87,6 @@ namespace SDK
 		static CUserCmd** g_ppCUserCmd;
 		static void** g_ppParticleManager;
 		static void** g_ppGameRules;
+		static void** g_ppEntityList;
 	};
 }

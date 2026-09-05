@@ -13,6 +13,9 @@
 #include <CS2/SDK/FunctionListSDK.hpp>
 
 #include <PluginSenseClient/CPluginSenseClient.hpp>
+#include <PluginSenseClient/CPluginSenseGUI.hpp>
+#include <PluginSenseClient/Features/CHelper/CHelper.hpp>
+#include <PluginSenseClient/Settings/MenuState.hpp>
 
 static CDllLauncher g_CDllLauncher{};
 
@@ -83,11 +86,19 @@ auto CDllLauncher::OnDestroy() -> void
 {
 	if ( !m_bDestroyed )
 	{
+		// 输入层必须最先恢复:窗口消息过程不还原的话,卸载后游戏输入消息会
+		// 流进已释放的模块(被异常处理链吞掉),键盘/鼠标全部失效
+		GetPluginSenseGUI()->RestoreInput();
+
+		// helper 若在运行:先关开关阻止后续帧继续注入,再释放当前按住的所有键
+		menu_state::helperEnabled = false;
+		GetHelper()->OnUnload();
+
 		GetPluginSenseClient()->OnDestroy();
 		GetDevLog()->Destroy();
 		GetHook_Loader()->DestroyHooks();
 		GetCrashLog()->DestroyVectorExceptionHandler();
-		
+
 		m_bDestroyed = true;
 	}
 }

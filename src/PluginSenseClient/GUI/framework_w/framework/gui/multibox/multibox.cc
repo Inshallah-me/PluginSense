@@ -99,7 +99,28 @@ namespace framework
 		if (animations::m_dropdown_open.val() > 0.f)
 		{
 			auto position2 = m_hide_label ? math::c_vector_2d(0, 0) : math::c_vector_2d(0, g_font->f_childs.measure(m_label).y + 35);
-			auto calculated_size = math::c_vector_2d(m_child_size, (this->m_data.size() * g_font->f_childs.measure(m_label).y + 1) + 6 /* 3 top / 3 bottom */);
+
+			// 选项多时列表限高,超出滚动(仿 dropdown/weapon changer 列表)
+			const float row_h = g_font->f_childs.measure(m_label).y;
+			constexpr float k_max_list_height = 300.f;
+			auto calculated_size = math::c_vector_2d(m_child_size, std::min((this->m_data.size() * row_h + 1) + 6, k_max_list_height));
+
+			const float visible_height = calculated_size.y - 6.f;
+			const float total_height = row_h * this->m_data.size();
+			const float max_scroll = std::max(0.f, total_height - visible_height);
+
+			// scrolling logic(仿 listbox):列表超高时滚轮滚动,平滑逼近
+			{
+				if (max_scroll > 0.f && g_input->mouse_in_region(m_pos + position2, calculated_size))
+				{
+					m_scroll_target -= g_input->get_wheel_value() * 40.f;
+					m_scroll_target = std::clamp(m_scroll_target, 0.f, max_scroll);
+				}
+
+				m_scroll_offset += (m_scroll_target - m_scroll_offset) * 0.15f;
+				if (std::abs(m_scroll_target - m_scroll_offset) < 0.5f)
+					m_scroll_offset = m_scroll_target;
+			}
 
 			float t = animations::m_dropdown_open.val();
 			float eased = t * t * (3.f - 2.f * t);
@@ -118,12 +139,21 @@ namespace framework
 					animations::m_dropdown_open.restore();
 					g_render->rect_filled((m_pos + position2).x, (m_pos + position2).y, calculated_size.x, calculated_size.y, g_style->m_element_base.modulate(animations::m_dropdown_open.val()), 3.f);
 
-					float y = m_pos.y + position2.y + 3.f;
+					g_render->push_clip((m_pos + position2).x, (m_pos + position2).y, calculated_size.x, calculated_size.y);
+
+					float y = m_pos.y + position2.y + 3.f - m_scroll_offset;
 					for (int i = 0; i < this->m_data.size(); i++)
 					{
 						auto dropdown = this->m_data[i];
 
-						auto bounding_switch = math::c_rect(m_pos.x + position2.x + 5.f, y, calculated_size.x, g_font->f_childs.measure(m_label).y);
+						// 屏幕外跳过
+						if (y + row_h < (m_pos + position2).y || y > (m_pos + position2).y + calculated_size.y)
+						{
+							y += row_h;
+							continue;
+						}
+
+						auto bounding_switch = math::c_rect(m_pos.x + position2.x + 5.f, y, calculated_size.x, row_h);
 						if (g_input->mouse_in_region(bounding_switch.pos(), bounding_switch.size()) && g_input->clicked(input::mouse_buttons::left) && !g_ctx->m_click_consumed)
 						{
 							//*this->val = i;
@@ -135,15 +165,44 @@ namespace framework
 						animations::m_dropdown_switch = utils::builder::create_animation_ctx(dropdown.m_label + std::to_string(i), (*dropdown.m_val) && g_ctx->is_focused(this), 0.5f);
 						animations::m_dropdown_option_hover = utils::builder::create_animation_ctx(dropdown.m_label + std::to_string(i) + "anim", g_input->mouse_in_region(bounding_switch.pos(), bounding_switch.size()) && g_ctx->is_focused(this), 0.5f);
 
+						const auto option_text_color = g_style->m_text.modulate(animations::m_dropdown_open.limit(0.3f).val()).lerp(g_style->m_accent.modulate(animations::m_dropdown_open.limit(1.f).val()), animations::m_dropdown_switch.val());
 
-						g_font->f_childs.text(m_pos.x + position2.x + 5.f + (5.f * animations::m_dropdown_option_hover.val()), y, dropdown.m_label,
-							g_style->m_text.modulate(animations::m_dropdown_open.limit(0.3f).val()).lerp(g_style->m_accent.modulate(animations::m_dropdown_open.limit(1.f).val()), animations::m_dropdown_switch.val()));
+						// 图标:优先取该选项的图标字符(仿 weapon changer),空则无图标
+						const float icon_hover = 5.f * animations::m_dropdown_option_hover.val();
+						std::string icon_char;
+						if (m_icon_stacks)
+						{
+							const auto icons = m_icon_stacks();
+							if (i >= 0 && i < static_cast<int>(icons.size()))
+								icon_char = icons[i];
+						}
+
+						if (!icon_char.empty())
+							g_font->f_weapon_icons.text(m_pos.x + position2.x + 5.f + icon_hover, y, icon_char, option_text_color);
+						const float text_x = m_pos.x + position2.x + (m_icon_stacks ? 55.f : 5.f) + icon_hover;
+						g_font->f_childs.text(text_x, y, dropdown.m_label, option_text_color);
 
 						animations::m_dropdown_open.restore();
 
-						y += g_font->f_childs.measure(m_label).y;
+						y += row_h;
 					}
 
+					g_render->restore_clip();
+
+					// scrollbar(同分区/child 样式)
+					if (max_scroll > 0.f)
+					{
+						const float track_x = (m_pos + position2).x + calculated_size.x - 7.f;
+						const float track_y = (m_pos + position2).y + 3.f;
+						const float track_h = calculated_size.y - 6.f;
+						const float thumb_h = std::clamp((track_h / std::max(total_height, track_h)) * track_h, 18.f, track_h);
+						const float thumb_range = std::max(1.f, track_h - thumb_h);
+						const float thumb_y = track_y + (m_scroll_offset / std::max(1.f, max_scroll)) * thumb_range;
+						const float alpha = animations::m_dropdown_open.val();
+
+						g_render->rect_filled(track_x, track_y, 2.f, track_h, hue::c_color(70, 70, 70).modulate(alpha * 0.35f), 2.f);
+						g_render->rect_filled(track_x, thumb_y, 2.f, thumb_h, hue::c_color(125, 125, 125).modulate(alpha * 0.55f), 2.f);
+					}
 				}, true /* we have to override push_clip */);
 
 			int vtx_end = target_list->VtxBuffer.Size;
@@ -173,6 +232,8 @@ namespace framework
 			if (!dropdown_list_hovered && g_input->clicked(input::mouse_buttons::left) && !g_ctx->m_click_consumed)
 			{
 				g_ctx->pop_focus(this);
+				m_scroll_offset = 0.f;
+				m_scroll_target = 0.f;
 			}
 		}
 

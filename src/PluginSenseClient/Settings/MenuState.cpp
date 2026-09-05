@@ -86,17 +86,38 @@ namespace menu_state
 	bool autoAim = true;             // aim_assist
 	bool autoExecute = true;         // auto_release
 	int aimSpeed = 18;               // aim_smoothing
-	float aimThreshold = 0.35f;      // aim_threshold
+	float aimThreshold = 0.1f;       // aim_threshold
 	int lockTimeMs = 45;             // lock_time_ms
 	int drawDistance = 800;          // draw_distance
 	int standDistance = 220;         // stand_distance
 	float standRadius = 22.f;        // stand_radius
 	float releaseRadius = 6.f;       // release_radius
 	float heightTolerance = 8.f;     // height_tolerance
-	bool showAction = true;          // show_action
+	bool grenadePreview = false;     // grenade_preview(手雷轨迹 PiP 预览)
 	bool showDistance = true;        // show_distance
 
 	// --- 子弹火花(Bullet sparks)---
 	bool bulletSparks = false;
 	ImVec4 sparksColor = { 0.68f, 0.75f, 1.0f, 1.0f }; // 淡蓝白
+
+	// --- Aimbot(aimlock)---
+	bool aimbotEnabled = false;
+	// Hitbox 默认全勾:勾选多个 = 智能模式,准心离哪个部位近就瞄哪个
+	bool aimbotPartHead = true;
+	bool aimbotPartNeck = true;
+	bool aimbotPartChest = true;
+	bool aimbotPartPelvis = true;
+	bool aimbotPartFeet = true;
+	// 覆盖 Hitbox 默认全不勾(配合默认不绑的覆盖键,默认行为 = 正常模式)
+	bool aimbotOverridePartHead = false;
+	bool aimbotOverridePartNeck = false;
+	bool aimbotOverridePartChest = false;
+	bool aimbotOverridePartPelvis = false;
+	bool aimbotOverridePartFeet = false;
+	int aimbotFov = 1;          // 默认 1°(近身锁),可在菜单调
+	int aimbotSmoothing = 5;    // 默认 5(轻度平滑),可在菜单调
+	int aimbotLockTime = 0;     // 默认 0 = 无限锁(不因时间松手),可在菜单调
+	bool aimbotPredictive = true;
+	bool aimbotDrawFov = true;  // 默认画 FOV 圈
+	ImVec4 aimbotFovColor = { 225.f / 255.f , 225.f / 255.f , 225.f / 255.f , 125.f / 255.f };
 }

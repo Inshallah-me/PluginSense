@@ -3,6 +3,7 @@
 #include <DllLauncher.hpp>
 #include <Common/DevLog.hpp>
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 
@@ -16,6 +17,51 @@ namespace
 {
 	// 用 .dat 扩展名:避免被配置面板的 .json 扫描当成配置文件
 	constexpr const char* kLineupFile = "helper_lineups.dat";
+
+	// 帧按钮掩码位(与 gen_timeline_data.py / HelperTimelineData.hpp 一致)
+	enum : std::uint16_t
+	{
+		rbtn_attack    = 1 << 0,
+		rbtn_jump      = 1 << 1,
+		rbtn_duck      = 1 << 2,
+		rbtn_forward   = 1 << 3,
+		rbtn_back      = 1 << 4,
+		rbtn_use       = 1 << 5,
+		rbtn_moveleft  = 1 << 6,
+		rbtn_moveright = 1 << 7,
+		rbtn_attack2   = 1 << 8,
+		rbtn_speed     = 1 << 9,
+	};
+
+	std::uint16_t EncodeFrameButtons( const helper_timeline::Frame& f )
+	{
+		std::uint16_t mask = 0;
+		if ( f.in_attack )    mask |= rbtn_attack;
+		if ( f.in_jump )      mask |= rbtn_jump;
+		if ( f.in_duck )      mask |= rbtn_duck;
+		if ( f.in_forward )   mask |= rbtn_forward;
+		if ( f.in_back )      mask |= rbtn_back;
+		if ( f.in_use )       mask |= rbtn_use;
+		if ( f.in_moveleft )  mask |= rbtn_moveleft;
+		if ( f.in_moveright ) mask |= rbtn_moveright;
+		if ( f.in_attack2 )   mask |= rbtn_attack2;
+		if ( f.in_speed )     mask |= rbtn_speed;
+		return mask;
+	}
+
+	void DecodeFrameButtons( std::uint16_t mask , helper_timeline::Frame& f )
+	{
+		f.in_attack    = ( mask & rbtn_attack ) != 0;
+		f.in_jump      = ( mask & rbtn_jump ) != 0;
+		f.in_duck      = ( mask & rbtn_duck ) != 0;
+		f.in_forward   = ( mask & rbtn_forward ) != 0;
+		f.in_back      = ( mask & rbtn_back ) != 0;
+		f.in_use       = ( mask & rbtn_use ) != 0;
+		f.in_moveleft  = ( mask & rbtn_moveleft ) != 0;
+		f.in_moveright = ( mask & rbtn_moveright ) != 0;
+		f.in_attack2   = ( mask & rbtn_attack2 ) != 0;
+		f.in_speed     = ( mask & rbtn_speed ) != 0;
+	}
 
 	std::string LineupFilePath()
 	{
@@ -37,6 +83,13 @@ namespace
 		return fallback;
 	}
 
+	bool ReadBool( const rapidjson::Value& obj , const char* name , bool fallback )
+	{
+		if ( obj.HasMember( name ) && obj[ name ].IsBool() )
+			return obj[ name ].GetBool();
+		return fallback;
+	}
+
 	std::string ReadStr( const rapidjson::Value& obj , const char* name )
 	{
 		if ( obj.HasMember( name ) && obj[ name ].IsString() )
@@ -46,20 +99,6 @@ namespace
 }
 
 static CHelperRecorder g_CHelperRecorder{};
-
-std::string CHelperRecorder::BuildActionLabel( std::uint16_t actions )
-{
-	// 对齐内置点位风格:Crouch+ / Walk+ / Run+ / Jump+ + Throw
-	std::string label;
-	if ( actions & resources::nades::action_crouch )
-		label += "Crouch+";
-	if ( actions & resources::nades::action_run )
-		label += ( actions & resources::nades::action_walk ) ? "Walk+" : "Run+";
-	if ( actions & resources::nades::action_jump )
-		label += "Jump+";
-	label += "Throw";
-	return label;
-}
 
 int CHelperRecorder::Add( const std::string& mapName , const UserLineup& lineup )
 {
@@ -152,22 +191,45 @@ void CHelperRecorder::Load()
 
 			UserLineup lineup;
 			lineup.name = ReadStr( entry , "name" );
-			lineup.action = ReadStr( entry , "action" );
+			lineup.weapon = ReadStr( entry , "weapon" );
 			lineup.x = ReadFloat( entry , "x" , 0.f );
 			lineup.y = ReadFloat( entry , "y" , 0.f );
 			lineup.z = ReadFloat( entry , "z" , 0.f );
 			lineup.pitch = ReadFloat( entry , "pitch" , 0.f );
 			lineup.yaw = ReadFloat( entry , "yaw" , 0.f );
 			lineup.kind = static_cast<std::uint8_t>( ReadInt( entry , "kind" , 0 ) );
-			lineup.actions = static_cast<std::uint16_t>( ReadInt( entry , "actions" , 0 ) );
-			lineup.run_ticks = static_cast<std::uint16_t>( ReadInt( entry , "run_ticks" , 0 ) );
-			lineup.after_jump_ticks = static_cast<std::uint8_t>( ReadInt( entry , "after_jump_ticks" , 0 ) );
-			lineup.throw_strength = ReadFloat( entry , "throw_strength" , 1.f );
-			lineup.manual = entry.HasMember( "manual" ) && entry[ "manual" ].IsBool()
-				? entry[ "manual" ].GetBool() : false;
-			lineup.override_builtin_index = ReadInt( entry , "override_builtin_index" , -1 );
-			lineup.hidden = entry.HasMember( "hidden" ) && entry[ "hidden" ].IsBool()
-				? entry[ "hidden" ].GetBool() : false;
+			lineup.hidden = ReadBool( entry , "hidden" , false );
+			lineup.builtin_id = ReadInt( entry , "builtin_id" , -1 );
+			lineup.annotations = static_cast<std::uint8_t>( ReadInt( entry , "annotations" , 0 ) );
+
+			// 时间线帧(雷类条目);墙点条目没有 frames
+			if ( entry.HasMember( "frames" ) && entry[ "frames" ].IsArray() )
+			{
+				for ( const auto& fr : entry[ "frames" ].GetArray() )
+				{
+					if ( !fr.IsObject() )
+						continue;
+
+					helper_timeline::Frame frame;
+					DecodeFrameButtons( static_cast<std::uint16_t>( ReadInt( fr , "b" , 0 ) ) , frame );
+					frame.angles = QAngle(
+						ReadFloat( fr , "pitch" , 0.f ) ,
+						ReadFloat( fr , "yaw" , 0.f ) , 0.f );
+					frame.position = Vector3(
+						ReadFloat( fr , "x" , 0.f ) ,
+						ReadFloat( fr , "y" , 0.f ) ,
+						ReadFloat( fr , "z" , 0.f ) );
+
+					lineup.frames.push_back( std::move( frame ) );
+				}
+			}
+
+			// 隐藏覆盖条目(builtin_id >= 0,无帧)原样保留
+			// 旧参数格式的雷类条目(无 frames)按约定丢弃;墙点快照保留
+			if ( lineup.builtin_id < 0
+				&& lineup.kind != static_cast<std::uint8_t>( resources::nades::kind::wallbang )
+				&& lineup.frames.empty() )
+				continue;
 
 			list.push_back( std::move( lineup ) );
 		}
@@ -206,21 +268,35 @@ void CHelperRecorder::Save() const
 		for ( const auto& lineup : list )
 		{
 			writer.StartObject();
-			writer.String( "name" );             writer.String( lineup.name.c_str() );
-			writer.String( "action" );           writer.String( lineup.action.c_str() );
-			writer.String( "x" );                writer.Double( lineup.x );
-			writer.String( "y" );                writer.Double( lineup.y );
-			writer.String( "z" );                writer.Double( lineup.z );
-			writer.String( "pitch" );            writer.Double( lineup.pitch );
-			writer.String( "yaw" );              writer.Double( lineup.yaw );
-			writer.String( "kind" );             writer.Int( lineup.kind );
-			writer.String( "actions" );          writer.Int( lineup.actions );
-			writer.String( "run_ticks" );        writer.Int( lineup.run_ticks );
-			writer.String( "after_jump_ticks" ); writer.Int( lineup.after_jump_ticks );
-			writer.String( "throw_strength" );   writer.Double( lineup.throw_strength );
-			writer.String( "manual" );           writer.Bool( lineup.manual );
-			writer.String( "override_builtin_index" ); writer.Int( lineup.override_builtin_index );
-			writer.String( "hidden" );           writer.Bool( lineup.hidden );
+			writer.String( "name" );   writer.String( lineup.name.c_str() );
+			writer.String( "weapon" ); writer.String( lineup.weapon.c_str() );
+			writer.String( "kind" );   writer.Int( lineup.kind );
+			writer.String( "x" );      writer.Double( lineup.x );
+			writer.String( "y" );      writer.Double( lineup.y );
+			writer.String( "z" );      writer.Double( lineup.z );
+			writer.String( "pitch" );  writer.Double( lineup.pitch );
+			writer.String( "yaw" );    writer.Double( lineup.yaw );
+			writer.String( "hidden" ); writer.Bool( lineup.hidden );
+			writer.String( "builtin_id" ); writer.Int( lineup.builtin_id );
+			writer.String( "annotations" ); writer.Int( lineup.annotations );
+
+			if ( !lineup.frames.empty() )
+			{
+				writer.String( "frames" );
+				writer.StartArray();
+				for ( const auto& frame : lineup.frames )
+				{
+					writer.StartObject();
+					writer.String( "b" );     writer.Int( EncodeFrameButtons( frame ) );
+					writer.String( "pitch" ); writer.Double( frame.angles.m_x );
+					writer.String( "yaw" );   writer.Double( frame.angles.m_y );
+					writer.String( "x" );     writer.Double( frame.position.m_x );
+					writer.String( "y" );     writer.Double( frame.position.m_y );
+					writer.String( "z" );     writer.Double( frame.position.m_z );
+					writer.EndObject();
+				}
+				writer.EndArray();
+			}
 			writer.EndObject();
 		}
 		writer.EndArray();

@@ -463,6 +463,19 @@ auto CPluginSenseGUI::OnReopenGUI() -> void
 	ApplyGameCursorState( m_bVisible , m_bMainActive );
 }
 
+// 卸载路径专用:只恢复输入层(消息过程 + 可见状态 + 光标),不销毁 ImGui/渲染资源。
+// 必须在摘钩子/卸载内存前调用:窗口消息过程不还原的话,游戏输入消息会流进
+// 已释放的模块(被异常处理链吞掉),卸载后键盘/鼠标全部失效。
+auto CPluginSenseGUI::RestoreInput() -> void
+{
+	if ( m_hCS2Window && m_WndProc_o )
+		SetWindowLongPtrA( m_hCS2Window , GWLP_WNDPROC , (LONG_PTR)m_WndProc_o );
+
+	m_bVisible = false;   // 防止残留状态继续吞键盘/鼠标消息
+	ApplyGameCursorState( false , m_bMainActive );
+	m_bInit = false;      // 在途的 GUI_WndProc 调用直接走转发分支
+}
+
 LRESULT WINAPI CPluginSenseGUI::GUI_WndProc( HWND hwnd , UINT uMsg , WPARAM wParam , LPARAM lParam )
 {
 	if ( uMsg == WM_QUIT || uMsg == WM_CLOSE || uMsg == WM_DESTROY )

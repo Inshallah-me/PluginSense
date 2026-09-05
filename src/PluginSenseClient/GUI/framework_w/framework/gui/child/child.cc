@@ -135,6 +135,13 @@ namespace framework
 					{
 						control->m_pos = m_parent_control->m_pos - math::c_vector_2d(m_parent_control->m_parent_width + 8.f, 0);
 					}
+					else
+					{
+						// 其他父控件(如 multibox):图标推到该行最右侧,
+						// 和普通 keybind 的图标位置一致(标签靠左、图标贴最右)
+						const float icon_w = g_font->f_icons.measure(ICON_FA_KEYBOARD).x;
+						control->m_pos = m_parent_control->m_pos + math::c_vector_2d(m_parent_control->m_child_size - icon_w - 2.f, 0);
+					}
 				}
 				else if (control->m_type == element_type::popup)
 				{

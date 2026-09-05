@@ -1,5 +1,7 @@
 #include "CPluginSenseClient.hpp"
 
+#include <unordered_set>
+
 #include <CS2/SDK/SDK.hpp>
 #include <CS2/SDK/Interface/IEngineToClient.hpp>
 #include <CS2/SDK/Interface/IGameEvent.hpp>
@@ -8,6 +10,7 @@
 #include <CS2/SDK/FunctionListSDK.hpp>
 
 #include <PluginSenseClient/GUI/CPluginSenseMenu.hpp>
+#include <PluginSenseClient/Features/CHelper/HelperTimeline.hpp>
 #include <PluginSenseClient/CPluginSenseGUI.hpp>
 #include <PluginSenseClient/Fonts/CFontManager.hpp>
 #include <PluginSenseClient/Render/CRenderStackSystem.hpp>
@@ -27,6 +30,7 @@
 #include <PluginSenseClient/Features/CHelper/CHelper.hpp>
 #include <PluginSenseClient/Features/CHelper/CHelperRecorder.hpp>
 #include <PluginSenseClient/Features/CBulletSparks/CBulletSparks.hpp>
+#include <PluginSenseClient/Features/CAimLock/CAimLock.hpp>
 #include <PluginSenseClient/Settings/MenuState.hpp>
 #include <GameClient/CL_Players.hpp>
 #include <PluginSenseClient/GUI/framework_w/framework/menu.hh>
@@ -45,6 +49,14 @@ auto CPluginSenseClient::OnInit() -> void
 	GetWeaponModel()->Init();
 	GetBulletSparks()->Init();
 	GetHelperRecorder()->Load();
+	{
+		std::unordered_set<int> hiddenIds;
+		for ( auto& [ mapName , lineups ] : GetHelperRecorder()->MutableMaps() )
+			for ( auto& lu : lineups )
+				if ( lu.builtin_id >= 0 && lu.hidden )
+					hiddenIds.insert( lu.builtin_id );
+		helper_timeline::StartLoad( hiddenIds );
+	}
 }
 
 auto CPluginSenseClient::OnDestroy() -> void
@@ -173,6 +185,8 @@ auto CPluginSenseClient::OnFireEventClientSide( IGameEvent* pGameEvent ) -> void
 
 auto CPluginSenseClient::OnRender() -> void
 {
+	// 手雷轨迹 PiP 预览已移入 CHelper::UpdateGrenadePreview(状态机派生,每帧 Tick 开头执行)
+
 	GetNameChanger()->OnFrame();
 	GetChatSpammer()->OnFrame();
 
@@ -191,6 +205,7 @@ auto CPluginSenseClient::OnRender() -> void
 		GetVelocityDisplay()->OnRender( CRender::GetHudDrawList(), w, h );
 		GetMotionCamera()->on_render( CRender::GetHudDrawList(), w, h );
 		GetHelper()->OnRender( CRender::GetHudDrawList(), w, h );
+		GetAimLock()->OnRender( CRender::GetHudDrawList(), w, h );
 	}
 
 	// 菜单最后绘制,置于所有 HUD 之上
@@ -209,7 +224,8 @@ auto CPluginSenseClient::OnCreateMove( CCSGOInput* pInput , CUserCmd* pUserCmd )
 	GetWorldVisuals()->on_create_move( pInput );
 	GetMotionCamera()->on_create_move( pInput );
 	GetVelocityDisplay()->OnCreateMove( pUserCmd );
-	GetHelper()->OnCreateMove( pInput );
+	GetHelper()->OnCreateMove( pInput , pUserCmd );
+	GetAimLock()->OnCreateMove( pInput );
 }
 
 auto GetPluginSenseClient() -> CPluginSenseClient*

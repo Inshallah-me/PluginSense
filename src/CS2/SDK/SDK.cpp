@@ -38,6 +38,7 @@ namespace SDK
 	CUserCmd** Pointers::g_ppCUserCmd = nullptr;
 	void** Pointers::g_ppParticleManager = nullptr;
 	void** Pointers::g_ppGameRules = nullptr;
+	void** Pointers::g_ppEntityList = nullptr;
 
 	IVEngineToClient* Interfaces::EngineToClient()
 	{
@@ -338,5 +339,24 @@ GetGameEntitySystemPointer:;
 		}
 
 		return g_ppGameRules ? *g_ppGameRules : nullptr;
+	}
+
+	// dwEntityList:mov [rip+disp], rcx; jmp; int3(vesta 同款 pattern + RIP 解析)
+	// 返回实体表基址(4×512 chunk 数组的起点),不再依赖 GetHighestEntityIndex 硬编码偏移
+	auto Pointers::EntityList() -> void*
+	{
+		if ( !g_ppEntityList )
+		{
+			auto addr = reinterpret_cast<uintptr_t>( FindPattern( CLIENT_DLL, XorStr( "48 89 0D ? ? ? ? E9 ? ? ? ? CC" ) ) );
+			if ( !addr )
+			{
+				DEV_LOG( "[error] dwEntityList pattern not found\n" );
+				return nullptr;
+			}
+
+			g_ppEntityList = GetPtrAddress<void**>( addr );
+		}
+
+		return g_ppEntityList ? *g_ppEntityList : nullptr;
 	}
 }

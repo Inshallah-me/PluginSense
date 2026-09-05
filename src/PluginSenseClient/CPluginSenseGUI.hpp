@@ -63,6 +63,8 @@ public:
 
 public:
 	auto OnReopenGUI() -> void;
+	// 卸载路径专用:恢复窗口消息过程并停止吞输入(不销毁 ImGui/渲染资源)
+	auto RestoreInput() -> void;
 
 public:
 	static LRESULT WINAPI GUI_WndProc( HWND hwnd , UINT uMsg , WPARAM wParam , LPARAM lParam );

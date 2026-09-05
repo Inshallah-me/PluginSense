@@ -133,10 +133,29 @@ namespace menu_state
 	extern float standRadius;        // stand_radius
 	extern float releaseRadius;      // release_radius
 	extern float heightTolerance;    // height_tolerance
-	extern bool showAction;          // show_action
+	extern bool grenadePreview;      // grenade_preview(手雷轨迹 PiP 预览)
 	extern bool showDistance;        // show_distance
 
 	// --- 子弹火花(Bullet sparks)---
 	extern bool bulletSparks;
 	extern ImVec4 sparksColor;
+
+	// --- Aimbot(aimlock)---
+	extern bool aimbotEnabled;      // 总开关
+	extern bool aimbotPartHead;     // Hitbox:头
+	extern bool aimbotPartNeck;     // Hitbox:脖子
+	extern bool aimbotPartChest;    // Hitbox:胸
+	extern bool aimbotPartPelvis;   // Hitbox:骨盆
+	extern bool aimbotPartFeet;     // Hitbox:脚
+	extern bool aimbotOverridePartHead;     // 覆盖 Hitbox:头(覆盖键激活时替换)
+	extern bool aimbotOverridePartNeck;     // 覆盖 Hitbox:脖子
+	extern bool aimbotOverridePartChest;    // 覆盖 Hitbox:胸
+	extern bool aimbotOverridePartPelvis;   // 覆盖 Hitbox:骨盆
+	extern bool aimbotOverridePartFeet;     // 覆盖 Hitbox:脚
+	extern int aimbotFov;           // 锁定 FOV(度)
+	extern int aimbotSmoothing;     // 平滑(0 = 直接锁)
+	extern int aimbotLockTime;      // 锁定时间(ms;0 = 无限锁,不因时间松手)
+	extern bool aimbotPredictive;   // 预判(速度外推)
+	extern bool aimbotDrawFov;      // 绘制 FOV 圈
+	extern ImVec4 aimbotFovColor;   // FOV 圈颜色(0-1)
 }

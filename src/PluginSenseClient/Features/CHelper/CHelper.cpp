@@ -20,9 +20,11 @@
 #include <CS2/SDK/FunctionListSDK.hpp>
 #include <CS2/SDK/Types/CEntityData.hpp>
 #include <CS2/SDK/Math/Math.hpp>
+#include <CS2/SDK/Econ/CEconItemDefinition.hpp>
 
 #include <PluginSenseClient/Settings/MenuState.hpp>
 #include <PluginSenseClient/GUI/framework_w/includes.hh>
+#include <PluginSenseClient/GUI/framework_w/render/fonts/weapon_icon_map.hpp>
 
 #include <GameClient/CL_Players.hpp>
 #include <GameClient/CL_Weapons.hpp>
@@ -71,43 +73,12 @@ namespace
 		return name;
 	}
 
-	const nd::map_entries* FindMap( const std::string& name )
-	{
-		for ( const auto& candidate : nd::k_maps )
-		{
-			if ( name == candidate.map )
-				return &candidate;
-		}
-		return nullptr;
-	}
-
 	std::string WeaponDefinitionName( int defIndex )
 	{
 		const auto it = kItemDefinitionNames.find( defIndex );
 		if ( it != kItemDefinitionNames.end() )
 			return it->second;
 		return "";
-	}
-
-	bool IsGrenadeWeapon( const std::string& weapon )
-	{
-		return weapon == "weapon_smokegrenade" || weapon == "weapon_flashbang" ||
-               weapon == "weapon_hegrenade" || weapon == "weapon_molotov" ||
-               weapon == "weapon_incgrenade" || weapon == "weapon_decoy";
-	}
-
-	ImU32 HelperKindColor( std::uint8_t kind , float alpha )
-	{
-		const int a = static_cast<int>( std::clamp( alpha , 0.f , 255.f ) );
-		switch ( static_cast<nd::kind>( kind ) )
-		{
-		case nd::kind::smoke:   return IM_COL32( 155 , 180 , 205 , a );
-		case nd::kind::flash:   return IM_COL32( 255 , 232 , 105 , a );
-		case nd::kind::molotov: return IM_COL32( 255 , 145 , 55 , a );
-		case nd::kind::he:      return IM_COL32( 255 , 105 , 105 , a );
-		case nd::kind::decoy:   return IM_COL32( 175 , 135 , 255 , a );
-		default:                return IM_COL32( 110 , 185 , 255 , a );
-		}
 	}
 
 	// 原生注入(NtUserInjectMouseInput / NtUserInjectKeyboardInput),
@@ -135,6 +106,45 @@ namespace
 		packet.mouse_data = 0;
 		packet.flags = flags;
 		return inject( &packet , 1 ) != FALSE;
+	}
+
+	// 角度差 → 鼠标 counts(灵敏度 500ms 缓存 + FOV 补偿 + dither 累计)
+	bool MouseDeltaCounts( float dPitch , float dYaw , int& dx , int& dy )
+	{
+		constexpr float kMousemoveYaw{ 0.022f };
+		static float s_cachedSensitivity = 2.5f;
+		static auto s_lastCheck = std::chrono::steady_clock::time_point{};
+
+		const auto now = std::chrono::steady_clock::now();
+		if ( now - s_lastCheck >= std::chrono::milliseconds( 500 ) )
+		{
+			s_lastCheck = now;
+			if ( auto* pCvar = SDK::Interfaces::EngineCvar() )
+			{
+				if ( auto* convar = pCvar->Find( "sensitivity" ) )
+				{
+					if ( convar->nType == EConVarType_Float32 )
+						s_cachedSensitivity = convar->value.fl;
+				}
+			}
+		}
+
+		float fovAdjust = 1.f;
+		if ( auto* player = GetCL_Players()->GetLocalPlayerPawn() )
+			fovAdjust = player->m_flFOVSensitivityAdjust();
+
+		const float degPerCount = s_cachedSensitivity * kMousemoveYaw * fovAdjust;
+		if ( degPerCount <= 0.f )
+			return false;
+
+		static float accX = 0.f , accY = 0.f;
+		accX += -dYaw / degPerCount;  // yaw 增大 → 鼠标左移
+		accY += dPitch / degPerCount; // pitch 增大(抬头) → 鼠标上移
+		dx = static_cast<int>( accX );
+		dy = static_cast<int>( accY );
+		accX -= static_cast<float>( dx );
+		accY -= static_cast<float>( dy );
+		return true;
 	}
 
 	bool InjectKey( int vk , bool pressed )
@@ -177,6 +187,85 @@ namespace
 	{
 		auto* gv = SDK::Pointers::GlobalVarsBase();
 		return gv ? static_cast<std::uint32_t>( gv->m_nTickCount() ) : 0u;
+	}
+
+	// ---- 穿点(wallbang)武器工具 ----
+	// 当前手持武器短名(ak47 / awp / m4a1_silencer ...),用于墙点图标;无则空
+	std::string WeaponShortName( std::uintptr_t item )
+	{
+		auto* def = reinterpret_cast<CEconItemDefinition*>( item );
+		if ( !def )
+			return {};
+		const char* raw = def->m_pszWeaponName();
+		if ( !raw )
+			return {};
+		std::string s = raw;
+		if ( s.rfind( "weapon_" , 0 ) == 0 )
+			s.erase( 0 , 7 );
+		return s;
+	}
+
+	// 当前手持武器的 esp_icons 图标字符(按 weapon_icon_map),无则空
+	std::string WeaponIconChar( const std::string& shortName )
+	{
+		if ( shortName.empty() )
+			return {};
+		const auto it = weapon_icon_map::icon_table.find( shortName );
+		return it != weapon_icon_map::icon_table.end() ? it->second : std::string();
+	}
+
+	// 从当前 active weapon 取 item(CEconItemDefinition*),穿点武器工具用
+	std::uintptr_t ActiveWeaponItem()
+	{
+		auto* weapon = GetCL_Weapons()->GetLocalActiveWeapon();
+		if ( !weapon )
+			return 0;
+		auto* attr = weapon->m_AttributeManager();
+		if ( !attr )
+			return 0;
+		auto* item = attr->m_Item();
+		if ( !item )
+			return 0;
+		return reinterpret_cast<std::uintptr_t>( item->GetStaticData() );
+	}
+
+	// 当前手持是否"可穿墙枪械"(手枪~机枪,非雷/刀/C4/电击枪)
+	bool CurrentWeaponIsWallbang()
+	{
+		const auto type = GetCL_Weapons()->GetLocalWeaponType();
+		switch ( type )
+		{
+		case CSWeaponType_t::WEAPONTYPE_PISTOL:
+		case CSWeaponType_t::WEAPONTYPE_SUBMACHINEGUN:
+		case CSWeaponType_t::WEAPONTYPE_RIFLE:
+		case CSWeaponType_t::WEAPONTYPE_SHOTGUN:
+		case CSWeaponType_t::WEAPONTYPE_SNIPER_RIFLE:
+		case CSWeaponType_t::WEAPONTYPE_MACHINEGUN:
+			return true;
+		default:
+			return false;
+		}
+	}
+
+	// 墙点武器集合存储为逗号分隔的武器短名(如 "ak47,awp")。工具:
+	// 解析列表是否包含某把枪
+	bool WallbangWeaponsContain( const std::string& list , const std::string& shortName )
+	{
+		if ( list.empty() || shortName.empty() )
+			return list.empty(); // 空列表 = 任意枪
+		std::size_t start = 0;
+		while ( start <= list.size() )
+		{
+			const auto comma = list.find( ',' , start );
+			const auto part = comma == std::string::npos
+				? list.substr( start ) : list.substr( start , comma - start );
+			if ( part == shortName )
+				return true;
+			if ( comma == std::string::npos )
+				break;
+			start = comma + 1;
+		}
+		return false;
 	}
 
 	// 执行控制台命令(经 InputService,与 CNameChanger::RunCommand 同机制)
@@ -237,78 +326,24 @@ namespace
 		}
 	}
 
-	std::string SafeReadString( std::uintptr_t addr , std::size_t maxLen )
+	// 安全读实体上的 schema 字段:地址/偏移/内存任一不可靠时返回 fallback,不裸解引用
+	bool SafeReadSchemaBool( std::uintptr_t entity , const char* className , const char* propertyName , bool fallback )
 	{
-		if ( !addr || addr < 0x10000 )
-			return {};
-		std::vector<char> buffer( maxLen + 1 , 0 );
-		if ( !SafeCopy( buffer.data() , addr , maxLen ) )
-			return {};
-		return std::string( buffer.data() );
-	}
+		if ( !entity || entity < 0x10000 )
+			return fallback;
 
-	InputBinding SourceKeyToBinding( const std::string& name )
-	{
-		std::string normalized = name;
-		std::transform( normalized.begin() , normalized.end() , normalized.begin() ,
-			[]( unsigned char c ) { return static_cast<char>( std::toupper( c ) ); } );
+		auto* schema = GetSchemaOffset();
+		if ( !schema )
+			return fallback;
 
-		const auto mouse = []( InputDevice device )
-		{
-			return InputBinding{ device , 0 };
-		};
-		if ( normalized == "MOUSE1" ) return mouse( InputDevice::MousePrimary );
-		if ( normalized == "MOUSE2" ) return mouse( InputDevice::MouseSecondary );
-		if ( normalized == "MOUSE3" ) return mouse( InputDevice::MouseMiddle );
-		if ( normalized == "MOUSE4" ) return mouse( InputDevice::MouseAux1 );
-		if ( normalized == "MOUSE5" ) return mouse( InputDevice::MouseAux2 );
+		const uint32_t offset = schema->GetOffset( className , propertyName );
+		if ( offset == 0 || offset > 0x10000 )
+			return fallback;
 
-		std::uint16_t virtualKey{};
-		if ( normalized.size() == 1 )
-		{
-			const auto value = normalized.front();
-			if ( ( value >= 'A' && value <= 'Z' ) || ( value >= '0' && value <= '9' ) )
-				virtualKey = static_cast<std::uint16_t>( value );
-		}
-		if ( !virtualKey && normalized.size() >= 2 && normalized.front() == 'F' )
-		{
-			int number = 0;
-			for ( std::size_t i = 1; i < normalized.size(); ++i )
-			{
-				if ( normalized[i] < '0' || normalized[i] > '9' )
-				{
-					number = 0;
-					break;
-				}
-				number = number * 10 + normalized[i] - '0';
-			}
-			if ( number >= 1 && number <= 24 )
-				virtualKey = static_cast<std::uint16_t>( VK_F1 + number - 1 );
-		}
-
-		if ( !virtualKey )
-		{
-			static const std::unordered_map<std::string , std::uint16_t> namedKeys =
-			{
-				{ "SPACE" , VK_SPACE } , { "TAB" , VK_TAB } , { "ENTER" , VK_RETURN } ,
-				{ "ESCAPE" , VK_ESCAPE } , { "BACKSPACE" , VK_BACK } , { "CAPSLOCK" , VK_CAPITAL } ,
-				{ "NUMLOCK" , VK_NUMLOCK } , { "SCROLLLOCK" , VK_SCROLL } , { "INSERT" , VK_INSERT } ,
-				{ "DELETE" , VK_DELETE } , { "HOME" , VK_HOME } , { "END" , VK_END } ,
-				{ "PGUP" , VK_PRIOR } , { "PGDN" , VK_NEXT } , { "PAUSE" , VK_PAUSE } ,
-				{ "SHIFT" , VK_LSHIFT } , { "RSHIFT" , VK_RSHIFT } , { "CTRL" , VK_LCONTROL } ,
-				{ "RCTRL" , VK_RCONTROL } , { "ALT" , VK_LMENU } , { "RALT" , VK_RMENU } ,
-				{ "UPARROW" , VK_UP } , { "DOWNARROW" , VK_DOWN } , { "LEFTARROW" , VK_LEFT } ,
-				{ "RIGHTARROW" , VK_RIGHT } , { "SEMICOLON" , VK_OEM_1 } , { "SLASH" , VK_OEM_2 } ,
-				{ "BACKQUOTE" , VK_OEM_3 } , { "LBRACKET" , VK_OEM_4 } , { "BACKSLASH" , VK_OEM_5 } ,
-				{ "RBRACKET" , VK_OEM_6 } , { "APOSTROPHE" , VK_OEM_7 } , { "EQUAL" , VK_OEM_PLUS } ,
-				{ "COMMA" , VK_OEM_COMMA } , { "MINUS" , VK_OEM_MINUS } , { "PERIOD" , VK_OEM_PERIOD } ,
-			};
-			const auto it = namedKeys.find( normalized );
-			if ( it != namedKeys.end() )
-				virtualKey = it->second;
-		}
-
-		return virtualKey ? InputBinding{ InputDevice::Keyboard , virtualKey } : InputBinding{};
+		bool value = fallback;
+		if ( !SafeCopy( &value , entity + offset , sizeof( value ) ) )
+			return fallback;
+		return value;
 	}
 
 	// 把用户配置的 VK 码转成内部绑定(鼠标键优先)
@@ -323,236 +358,6 @@ namespace
 		return {};
 	}
 
-	bool ContainsCommand( const std::string& command , const std::string& token )
-	{
-		if ( token.empty() )
-			return false;
-		const auto delimiter = []( char value )
-		{
-			return std::isspace( static_cast<unsigned char>( value ) ) != 0
-				|| value == ';' || value == '"';
-		};
-		std::string lower = command;
-		std::transform( lower.begin() , lower.end() , lower.begin() ,
-			[]( unsigned char c ) { return static_cast<char>( std::tolower( c ) ); } );
-		for ( std::size_t cursor = 0; cursor + token.size() <= lower.size(); ++cursor )
-		{
-			if ( lower.compare( cursor , token.size() , token ) != 0 )
-				continue;
-			const bool before = cursor == 0 || delimiter( command[ cursor - 1 ] );
-			const bool after = cursor + token.size() == command.size()
-				|| delimiter( command[ cursor + token.size() ] );
-			if ( before && after )
-				return true;
-		}
-		return false;
-	}
-
-	constexpr std::size_t kInputCodeCount{ 0x204 };
-	constexpr std::size_t kBindingRecordSize{ 0x58 };
-	constexpr std::size_t kBindingSlotCount{ 11 };
-	constexpr std::size_t kInputNameBias{ 1 };
-	constexpr std::uintptr_t kCurrentBindingOffset{ 0x33050 };
-	constexpr std::uintptr_t kCurrentKeyNameTableRva{ 0x3a210 };
-
-	std::uintptr_t GetInputService()
-	{
-		HMODULE eng = GetModuleHandleW( L"engine2.dll" );
-		if ( !eng )
-			return 0;
-		auto create = reinterpret_cast<void* ( __cdecl* )( const char* , int* )>(
-			GetProcAddress( eng , "CreateInterface" ) );
-		return create ? reinterpret_cast<std::uintptr_t>( create( "InputService_001" , nullptr ) ) : 0;
-	}
-
-	std::uintptr_t BindingMemberOffset( std::uintptr_t getter )
-	{
-		if ( !getter )
-			return kCurrentBindingOffset;
-		std::array<std::uint8_t , 96> code{};
-		if ( !SafeCopy( code.data() , getter , code.size() ) )
-			return kCurrentBindingOffset;
-		for ( std::size_t i = 0; i + 8 <= code.size(); ++i )
-		{
-			if ( ( code[ i ] & 0xf0u ) != 0x40u || code[ i + 1 ] != 0x8bu
-				|| ( code[ i + 2 ] & 0xc7u ) != 0x84u )
-				continue;
-			std::int32_t displacement{};
-			memcpy( &displacement , code.data() + i + 4 , sizeof( displacement ) );
-			if ( displacement >= 0x10000 && displacement <= 0x100000 )
-				return static_cast<std::uintptr_t>( displacement );
-		}
-		return kCurrentBindingOffset;
-	}
-
-	std::uintptr_t LocateKeyNameTable( std::uintptr_t inputModule )
-	{
-		const auto validate = []( std::uintptr_t table )
-		{
-			if ( !table || table < 0x10000 )
-				return false;
-			std::uintptr_t spacePtr = 0;
-			if ( !SafeCopy( &spacePtr , table + 66 * sizeof( std::uintptr_t ) , sizeof( spacePtr ) ) )
-				return false;
-			return SafeReadString( spacePtr , 16 ) == "SPACE";
-		};
-
-		if ( !inputModule )
-			return 0;
-		const auto fallback = inputModule + kCurrentKeyNameTableRva;
-		return validate( fallback ) ? fallback : 0;
-	}
-
-	struct LiveInputBindings
-	{
-		std::array<std::vector<InputBinding> , 9> bindings{}; // Forward/Back/Left/Right/Walk/Duck/Jump/Attack/Attack2
-		std::uintptr_t inputService = 0;
-		std::uintptr_t bindingTable = 0;
-		std::uintptr_t keyNameTable = 0;
-		std::chrono::steady_clock::time_point nextRefresh{};
-
-		static std::size_t ActionIndex( InputAction action )
-		{
-			switch ( action )
-			{
-			case InputAction::Forward: return 0;
-			case InputAction::Back:    return 1;
-			case InputAction::Left:    return 2;
-			case InputAction::Right:   return 3;
-			case InputAction::Walk:    return 4;
-			case InputAction::Duck:    return 5;
-			case InputAction::Jump:    return 6;
-			case InputAction::Attack:  return 7;
-			case InputAction::Attack2: return 8;
-			}
-			return 0;
-		}
-
-		void RefreshLocked( std::chrono::steady_clock::time_point now )
-		{
-			if ( now < nextRefresh )
-				return;
-			nextRefresh = now + std::chrono::seconds( 1 );
-
-			if ( !inputService )
-			{
-				inputService = GetInputService();
-				std::uintptr_t vtable = 0;
-				if ( inputService && SafeCopy( &vtable , inputService , sizeof( vtable ) ) && vtable )
-				{
-					std::uintptr_t getter = 0;
-					if ( SafeCopy( &getter , vtable + 32 * sizeof( std::uintptr_t ) , sizeof( getter ) ) )
-						bindingTable = inputService + BindingMemberOffset( getter );
-				}
-			}
-			if ( !keyNameTable )
-				keyNameTable = LocateKeyNameTable(
-					reinterpret_cast<std::uintptr_t>( GetModuleHandleW( L"inputsystem.dll" ) ) );
-			if ( !bindingTable || !keyNameTable )
-				return;
-
-			std::vector<std::uint8_t> records( kInputCodeCount * kBindingRecordSize );
-			std::array<std::uintptr_t , kInputCodeCount> keyNames{};
-			if ( !SafeCopy( records.data() , bindingTable , records.size() )
-				|| !SafeCopy( keyNames.data() , keyNameTable , sizeof( keyNames ) ) )
-				return;
-
-			const auto keyNameIs = [ &keyNames ]( std::size_t code , const std::string& expected )
-			{
-				return code < keyNames.size() && keyNames[ code ]
-					&& SafeReadString( keyNames[ code ] , 32 ) == expected;
-			};
-			if ( !keyNameIs( 65 , "ENTER" ) || !keyNameIs( 66 , "SPACE" )
-				|| !keyNameIs( 317 , "MOUSE1" ) || !keyNameIs( 318 , "MOUSE2" ) )
-			{
-				bindings = {};
-				return;
-			}
-
-			std::array<std::vector<InputBinding> , 9> refreshed{};
-			for ( std::size_t code = 0; code + kInputNameBias < kInputCodeCount; ++code )
-			{
-				const auto nameAddress = keyNames[ code + kInputNameBias ];
-				if ( !nameAddress )
-					continue;
-				const std::string name = SafeReadString( nameAddress , 32 );
-				auto binding = SourceKeyToBinding( name );
-				if ( binding.device == InputDevice::Keyboard && !binding.virtualKey )
-					continue;
-
-				for ( std::size_t slot = 0; slot < kBindingSlotCount; ++slot )
-				{
-					std::uintptr_t commandAddress{};
-					memcpy( &commandAddress , records.data() + code * kBindingRecordSize
-						+ slot * sizeof( std::uintptr_t ) , sizeof( commandAddress ) );
-					if ( commandAddress < 0x10000 )
-						continue;
-
-					const std::string command = SafeReadString( commandAddress , 192 );
-					const char* tokens[ 6 ] = { "+forward" , "+speed" , "+duck" , "+jump" , "+attack" , "+attack2" };
-					for ( std::size_t a = 0; a < 6; ++a )
-					{
-						if ( !ContainsCommand( command , tokens[ a ] ) )
-							continue;
-						auto& candidates = refreshed[ a ];
-						const bool dup = std::any_of( candidates.begin() , candidates.end() ,
-							[ &binding ]( const InputBinding& c )
-							{
-								return c.device == binding.device && c.virtualKey == binding.virtualKey;
-							} );
-						if ( !dup )
-							candidates.push_back( binding );
-					}
-				}
-			}
-			bindings = std::move( refreshed );
-			DEV_LOG( "[helper] attack cand=%zu" , bindings[ 4 ].size() );
-			for ( const auto& c : bindings[ 4 ] )
-				DEV_LOG( "[helper]   atk dev=%d vk=%d" , (int)c.device , c.virtualKey );
-			DEV_LOG( "[helper] attack2 cand=%zu" , bindings[ 5 ].size() );
-			for ( const auto& c : bindings[ 5 ] )
-				DEV_LOG( "[helper]   atk2 dev=%d vk=%d" , (int)c.device , c.virtualKey );
-		}
-
-		InputBinding Resolve( InputAction action )
-		{
-			RefreshLocked( std::chrono::steady_clock::now() );
-			const std::size_t index = ActionIndex( action );
-			if ( index >= bindings.size() )
-				return {};
-			const auto& candidates = bindings[ index ];
-
-			const auto expectedMouse = action == InputAction::Attack
-				? InputDevice::MousePrimary
-				: action == InputAction::Attack2 ? InputDevice::MouseSecondary : InputDevice::Keyboard;
-			if ( expectedMouse != InputDevice::Keyboard )
-			{
-				const auto expected = std::find_if( candidates.begin() , candidates.end() ,
-					[ expectedMouse ]( const InputBinding& c )
-					{
-						return c.device == expectedMouse;
-					} );
-				if ( expected != candidates.end() )
-					return *expected;
-			}
-
-			const auto ordinary = std::find_if( candidates.begin() , candidates.end() ,
-				[]( const InputBinding& c )
-				{
-					return c.device != InputDevice::Keyboard
-						|| ( c.virtualKey != VK_F23 && c.virtualKey != VK_F24 );
-				} );
-			return ordinary != candidates.end() ? *ordinary
-				: candidates.empty() ? InputBinding{} : candidates.front();
-		}
-	};
-
-	inline LiveInputBindings& InputBindings()
-	{
-		static LiveInputBindings value{};
-		return value;
-	}
-
 }
 
 static CHelper g_CHelper{};
@@ -560,9 +365,15 @@ static CHelper g_CHelper{};
 // ============================================================================
 // 视角来源(对齐项目:CreateMove 钩子传 CCSGOInput,用 CCSGOInput_GetViewAngles)
 // ============================================================================
-void CHelper::OnCreateMove( CCSGOInput* pInput )
+void CHelper::OnCreateMove( CCSGOInput* pInput , CUserCmd* pUserCmd )
 {
 	m_pInput = pInput;
+	m_pCmd = pUserCmd;
+
+	// 录制状态机按游戏 tick 驱动(纯读):按钮/视角/位置每 tick 采样一帧。
+	// 会话建立/结束(含落盘)仍留在渲染侧 Tick,与菜单对录制表的读写保持同线程串行。
+	if ( m_RecordSessionActive )
+		UpdateRecordSession();
 }
 
 bool CHelper::GetRenderCameraAngles( QAngle& out ) const
@@ -593,12 +404,18 @@ std::uint8_t CHelper::ResolveWeaponKind() const
 	if ( !item )
 		return 0xff;
 
+	// 投掷物 → 对应雷类型
 	const std::string name = WeaponDefinitionName( item->m_iItemDefinitionIndex() );
 	if ( name == "weapon_smokegrenade" ) return static_cast<std::uint8_t>( nd::kind::smoke );
 	if ( name == "weapon_flashbang" ) return static_cast<std::uint8_t>( nd::kind::flash );
 	if ( name == "weapon_molotov" || name == "weapon_incgrenade" ) return static_cast<std::uint8_t>( nd::kind::molotov );
 	if ( name == "weapon_hegrenade" ) return static_cast<std::uint8_t>( nd::kind::he );
 	if ( name == "weapon_decoy" ) return static_cast<std::uint8_t>( nd::kind::decoy );
+
+	// 可穿墙枪械 → 穿点(墙bang)类型
+	if ( CurrentWeaponIsWallbang() )
+		return static_cast<std::uint8_t>( nd::kind::wallbang );
+
 	return 0xff;
 }
 
@@ -628,6 +445,7 @@ std::string CHelper::KindLabel( std::uint8_t kind ) const
 	case static_cast<std::uint8_t>( nd::kind::molotov ): return "Molotov";
 	case static_cast<std::uint8_t>( nd::kind::he ):     return "HE";
 	case static_cast<std::uint8_t>( nd::kind::decoy ):  return "Decoy";
+	case static_cast<std::uint8_t>( nd::kind::wallbang ): return "Wallbang";
 	default: return "?";
 	}
 }
@@ -655,12 +473,8 @@ std::vector<std::string> CHelper::BuildRecorderItems( std::uint8_t kindFilter ) 
 				std::string label;
 				if ( lu.hidden )
 					label += "[hidden] ";
-				else if ( lu.override_builtin_index >= 0 )
-					label += "[override] ";
 				label += std::to_string( i + 1 ) + ". " + lu.name;
 				label += " (" + KindLabel( lu.kind ) + ")";
-				if ( !lu.action.empty() )
-					label += " " + lu.action;
 				items.push_back( std::move( label ) );
 			}
 		}
@@ -741,109 +555,72 @@ int CHelper::GetRecorderIndexAt( int listPos , std::uint8_t kindFilter ) const
 	return -1;
 }
 
+// 内置点位 = 点位库时间线(只读:列表/传送;参数化编辑不适用于逐帧数据)
 std::vector<std::string> CHelper::BuildBuiltinItems( std::uint8_t kindFilter ) const
 {
 	std::vector<std::string> items;
+	if ( !helper_timeline::Ready() )
+		return items;
+
 	const std::string mapName = GetCurrentMapName();
 	if ( mapName.empty() )
 		return items;
 
-	const auto* map = FindMap( mapName );
-	if ( !map )
+	const auto* points = helper_timeline::GetMapPoints( mapName );
+	if ( !points )
 		return items;
 
-	// 查某内置点位是否被编辑/隐藏(返回 0=未动 1=已编辑 2=已隐藏)
-	auto overrideState = [&]( std::uint32_t builtinIndex ) -> int
+	int index = 0;
+	for ( const auto& point : *points )
 	{
-		if ( auto* recorder = GetHelperRecorder() )
-		{
-			if ( const auto* list = recorder->Get( mapName ) )
-			{
-				for ( const auto& lu : *list )
-				{
-					if ( lu.override_builtin_index == static_cast<int>( builtinIndex ) )
-						return lu.hidden ? 2 : 1;
-				}
-			}
-		}
-		return 0;
-	};
-
-	items.reserve( map->count );
-	for ( std::uint32_t i = 0; i < map->count; ++i )
-	{
-		const auto& e = map->data[ i ];
-		const std::uint8_t eKind = static_cast<std::uint8_t>( e.type );
-		if ( kindFilter != 0xff && eKind != kindFilter )
+		if ( kindFilter != 0xff && point.kind != kindFilter )
 			continue;
 
-		std::string label = "[" + std::to_string( i ) + "]";
-		// 被覆盖编辑/隐藏的内置点位,开头加标记
-		const int state = overrideState( i );
-		if ( state == 2 )
+		std::string label = "[" + std::to_string( index ) + "]";
+		if ( point.hidden )
 			label += " [hidden]";
-		else if ( state == 1 )
-			label += " [edited]";
-		label += " " + std::string( e.name ? e.name : "" );
-		label += " (" + KindLabel( eKind ) + ")";
-		if ( e.action )
-		{
-			label += " ";
-			label += e.action;
-		}
+		label += " " + point.name;
+		label += " (" + KindLabel( point.kind ) + ")";
 		items.push_back( std::move( label ) );
+		++index;
 	}
 	return items;
 }
 
+// 时间线点位以"可传送"形式读出;Save/Remove 对时间线条目为 no-op
 bool CHelper::GetBuiltinItem( int listPos , std::uint8_t kindFilter , UserLineup& out ) const
 {
+	if ( !helper_timeline::Ready() )
+		return false;
+
 	const std::string mapName = GetCurrentMapName();
 	if ( mapName.empty() || listPos < 0 )
 		return false;
 
-	const auto* map = FindMap( mapName );
-	if ( !map )
+	const auto* points = helper_timeline::GetMapPoints( mapName );
+	if ( !points )
 		return false;
 
-	// 按筛选定位:跳过非匹配类型,listPos 是"筛选后列表"的位置
 	int matched = 0;
-	for ( std::uint32_t i = 0; i < map->count; ++i )
+	for ( const auto& point : *points )
 	{
-		const auto& e = map->data[ i ];
-		const std::uint8_t eKind = static_cast<std::uint8_t>( e.type );
-		if ( kindFilter != 0xff && eKind != kindFilter )
+		if ( kindFilter != 0xff && point.kind != kindFilter )
 			continue;
 
 		if ( matched == listPos )
 		{
-			// 若该内置点位已被用户覆盖(编辑/隐藏),载入覆盖版本(含 hidden)
-			if ( auto* recorder = GetHelperRecorder() )
-			{
-				if ( const auto* list = recorder->Get( mapName ) )
-				{
-					for ( const auto& lu : *list )
-					{
-						if ( lu.override_builtin_index == static_cast<int>( i ) )
-						{
-							out = lu; // 覆盖条目已含 hidden 与原始索引
-							return true;
-						}
-					}
-				}
-			}
-
-			out.name = e.name ? e.name : "";
-			out.action = e.action ? e.action : "";
-			out.x = e.x; out.y = e.y; out.z = e.z;
-			out.pitch = e.pitch; out.yaw = e.yaw;
-			out.kind = eKind;
-			out.actions = e.actions;
-			out.run_ticks = e.run_ticks;
-			out.after_jump_ticks = e.after_jump_ticks;
-			out.throw_strength = e.throw_strength;
-			out.manual = e.manual;
-			out.override_builtin_index = static_cast<int>( i ); // 内置原始索引
+			const QAngle aimAngles = !point.frames.empty() ? point.frames.front().angles : point.angles;
+			out = UserLineup{};
+			out.name = point.name;
+			out.weapon = point.weapon;
+			out.x = point.position.m_x;
+			out.y = point.position.m_y;
+			out.z = point.position.m_z;
+			out.pitch = aimAngles.m_x;
+			out.yaw = aimAngles.m_y;
+			out.kind = point.kind;
+			out.hidden = point.hidden;
+			out.builtin_id = point.id; // Save(隐藏)与编辑缓冲的 original 用它定位
 			return true;
 		}
 		++matched;
@@ -851,77 +628,79 @@ bool CHelper::GetBuiltinItem( int listPos , std::uint8_t kindFilter , UserLineup
 	return false;
 }
 
+// 内置时间线点位:仅支持隐藏覆盖(helper_lineups.dat 里写一条 builtin_id 条目)
 bool CHelper::SaveBuiltinOverride( int builtinIndex , const UserLineup& lineup )
 {
-	const std::string mapName = GetCurrentMapName();
-	if ( mapName.empty() || builtinIndex < 0 )
-		return false;
-
 	auto* recorder = GetHelperRecorder();
-	if ( !recorder )
+	if ( !recorder || builtinIndex < 0 )
 		return false;
 
-	// 取内置原值,判断 lineup 是否与内置原值完全相同
-	const auto* map = FindMap( mapName );
-	bool sameAsBuiltin = false;
-	if ( map && static_cast<std::uint32_t>( builtinIndex ) < map->count )
+	const std::string mapName = GetCurrentMapName();
+	if ( mapName.empty() )
+		return false;
+
+	auto* point = helper_timeline::FindPointById( builtinIndex );
+	if ( !point )
+		return false;
+
+	// 已有同 id 的覆盖条目 → 更新;无则追加(保留其它字段以便取消隐藏时还原)
+	const auto* existing = recorder->Get( mapName );
+	if ( !existing )
 	{
-		const auto& e = map->data[ builtinIndex ];
-		sameAsBuiltin =
-			lineup.hidden == false
-			&& lineup.name == ( e.name ? e.name : "" )
-			&& lineup.action == ( e.action ? e.action : "" )
-			&& lineup.x == e.x && lineup.y == e.y && lineup.z == e.z
-			&& lineup.pitch == e.pitch && lineup.yaw == e.yaw
-			&& lineup.kind == static_cast<std::uint8_t>( e.type )
-			&& lineup.actions == e.actions
-			&& lineup.run_ticks == e.run_ticks
-			&& lineup.after_jump_ticks == e.after_jump_ticks
-			&& lineup.throw_strength == e.throw_strength
-			&& lineup.manual == e.manual;
+		UserLineup entry;
+		entry.builtin_id = builtinIndex;
+		entry.hidden = lineup.hidden;
+		entry.kind = point->kind;
+		entry.name = point->name;
+		recorder->Add( mapName , entry );
+		point->hidden = lineup.hidden;
+		return true;
 	}
-
-	// 与内置原值完全相同 → 不是一次真正的编辑:删除覆盖条目,恢复内置原样
-	if ( sameAsBuiltin )
-		return RemoveBuiltinOverride( builtinIndex );
-
-	// 已有同索引覆盖条目 → 更新
-	if ( const auto* list = recorder->Get( mapName ) )
+	auto& list = const_cast<std::vector<UserLineup>&>( *existing );
+	for ( auto& lu : list )
 	{
-		for ( std::size_t i = 0; i < list->size(); ++i )
+		if ( lu.builtin_id == builtinIndex )
 		{
-			if ( ( *list )[ i ].override_builtin_index == builtinIndex )
-			{
-				UserLineup updated = lineup;
-				updated.override_builtin_index = builtinIndex;
-				return recorder->Update( mapName , i , updated );
-			}
+			lu.hidden = lineup.hidden;
+			lu.name = point->name;
+			recorder->Save();
+			point->hidden = lineup.hidden;
+			return true;
 		}
 	}
 
-	// 无则新增覆盖条目
-	UserLineup added = lineup;
-	added.override_builtin_index = builtinIndex;
-	recorder->Add( mapName , added );
+	// 列表存在但没有该 id 的覆盖条目 → 追加
+	UserLineup entry;
+	entry.builtin_id = builtinIndex;
+	entry.hidden = lineup.hidden;
+	entry.kind = point->kind;
+	entry.name = point->name;
+	recorder->Add( mapName , entry );
+	point->hidden = lineup.hidden;
 	return true;
 }
 
 bool CHelper::RemoveBuiltinOverride( int builtinIndex )
 {
-	const std::string mapName = GetCurrentMapName();
-	if ( mapName.empty() || builtinIndex < 0 )
+	auto* recorder = GetHelperRecorder();
+	if ( !recorder || builtinIndex < 0 )
 		return false;
 
-	auto* recorder = GetHelperRecorder();
-	if ( !recorder )
+	const std::string mapName = GetCurrentMapName();
+	if ( mapName.empty() )
 		return false;
 
 	if ( const auto* list = recorder->Get( mapName ) )
 	{
 		for ( std::size_t i = 0; i < list->size(); ++i )
 		{
-			if ( ( *list )[ i ].override_builtin_index == builtinIndex )
-				return recorder->Remove( mapName , i );
+			if ( ( *list )[ i ].builtin_id == builtinIndex )
+			{
+				recorder->Remove( mapName , i );
+				if ( auto* point = helper_timeline::FindPointById( builtinIndex ) )
+					point->hidden = false;
+				return true;
+			}
 		}
 	}
 	return false;
@@ -943,32 +722,105 @@ void CHelper::SetRecordName( const std::string& name )
 }
 
 // ============================================================================
+// 墙点武器多选:可穿墙枪械清单(短名 + 显示名)
+// ============================================================================
+const std::vector<CHelper::WallWeaponOption>& CHelper::WallWeaponOptions()
+{
+	static const std::vector<WallWeaponOption> options =
+	{
+		// 手枪
+		{ "glock" , "Glock" } , { "hkp2000" , "P2000" } , { "usp_silencer" , "USP-S" } ,
+		{ "p250" , "P250" } , { "elite" , "Dual" } , { "fiveseven" , "Five-SeveN" } ,
+		{ "tec9" , "Tec-9" } , { "cz75a" , "CZ75" } , { "revolver" , "R8" } ,
+		{ "deagle" , "Deagle" } ,
+		// SMG
+		{ "mac10" , "Mac-10" } , { "mp9" , "MP9" } , { "mp7" , "MP7" } ,
+		{ "mp5sd" , "MP5-SD" } , { "ump45" , "UMP-45" } , { "p90" , "P90" } ,
+		{ "bizon" , "PP-Bizon" } ,
+		// 步枪
+		{ "galilar" , "Galil" } , { "famas" , "FAMAS" } , { "ak47" , "AK-47" } ,
+		{ "m4a1" , "M4A4" } , { "m4a1_silencer" , "M4A1-S" } , { "sg556" , "SG 553" } ,
+		{ "aug" , "AUG" } ,
+		// 狙击
+		{ "ssg08" , "SSG 08" } , { "awp" , "AWP" } , { "scar20" , "SCAR-20" } ,
+		{ "g3sg1" , "G3SG1" } ,
+		// 霰弹
+		{ "nova" , "Nova" } , { "xm1014" , "XM1014" } , { "mag7" , "MAG-7" } ,
+		{ "sawedoff" , "Sawed-Off" } ,
+		// 机枪
+		{ "m249" , "M249" } , { "negev" , "Negev" } ,
+	};
+	return options;
+}
+
+void CHelper::ParseWallWeapons( const std::string& list , std::vector<bool>& selected )
+{
+	selected.assign( WallWeaponOptions().size() , false );
+	if ( list.empty() )
+		return;
+	const auto& options = WallWeaponOptions();
+	std::size_t start = 0;
+	while ( start <= list.size() )
+	{
+		const auto comma = list.find( ',' , start );
+		const auto part = comma == std::string::npos
+			? list.substr( start ) : list.substr( start , comma - start );
+		for ( std::size_t i = 0; i < options.size(); ++i )
+			if ( part == options[ i ].shortName )
+				selected[ i ] = true;
+		if ( comma == std::string::npos )
+			break;
+		start = comma + 1;
+	}
+}
+
+std::string CHelper::BuildWallWeapons( const std::vector<bool>& selected )
+{
+	std::string out;
+	const auto& options = WallWeaponOptions();
+	for ( std::size_t i = 0; i < options.size() && i < selected.size(); ++i )
+	{
+		if ( !selected[ i ] )
+			continue;
+		if ( !out.empty() )
+			out += ",";
+		out += options[ i ].shortName;
+	}
+	return out;
+}
+
+// 与 WallWeaponOptions 对齐的 esp 图标字符(空串 = 无图标),供编辑面板武器多选框行前图标
+const std::vector<std::string>& CHelper::WallWeaponIcons()
+{
+	static std::vector<std::string> icons = []()
+	{
+		std::vector<std::string> out;
+		const auto& options = WallWeaponOptions();
+		out.reserve( options.size() );
+		for ( const auto& opt : options )
+			out.push_back( WeaponIconChar( opt.shortName ) );
+		return out;
+	}();
+	return icons;
+}
+
+// ============================================================================
 // 录制会话(toggle 键:按下开始,再按一下保存)
-// 会话中跟踪:拔销站位、起跳时机、跑动 tick、蹲姿、出手力度与视角
+// 时间线录制:就绪(手持武器且静止)后每 usercmd 采样一帧
+// {按钮, 视角, 位置},出手(攻击松开)后再录 32 tick 尾巴即完成 —— 无参数推断。
 // ============================================================================
 void CHelper::BeginRecordSession()
 {
 	m_RecordSessionActive = true;
 	m_SessionReady = false;
-	m_SessionPinArmed = false;
-	m_SessionWasAirborne = false;
-	m_SessionWasCrouch = false;
-	m_SessionWasWalk = false;
-	m_SessionThrew = false;
-	m_SessionArmTick = 0;
-	m_SessionJumpTick = 0;
-	m_SessionThrowTick = 0;
-	m_SessionRunTicks = 0;
-	m_SessionAfterJumpTicks = 0;
+	m_SessionFrames.clear();
+	m_SessionSawAttack = false;
+	m_SessionTail = -1;
+	m_SessionTailDone = false;
+	m_SessionKind = 0xff;
 	m_SessionArmPos = {};
 	m_SessionThrowAngles = {};
-	m_SessionStrength = 1.f;
-	m_SessionKind = 0xff;
-
-	// 描点 = 玩家按下录制键那一刻的瞄准方向(不是保存/出手时的视角)
-	GetRenderCameraAngles( m_SessionThrowAngles );
 	m_SessionStartTime = Now();
-	DEV_LOG( "[helper] record session started" );
 }
 
 void CHelper::UpdateRecordSession()
@@ -978,10 +830,8 @@ void CHelper::UpdateRecordSession()
 		return;
 
 	const std::uint32_t tick = TickCount();
-	const Vector3 pos = player->GetOrigin();
 
-	// 就绪门槛:会话开始后先等玩家"手持投掷物且基本静止"才正式记录,
-	// 避免把走过去/切雷的晃动过程录进站位与动作。
+	// 就绪门槛:手持可用武器(雷或枪)且基本静止,避免把走过去/切雷录进起点
 	if ( !m_SessionReady )
 	{
 		const std::uint8_t readyKind = ResolveWeaponKind();
@@ -992,102 +842,65 @@ void CHelper::UpdateRecordSession()
 		if ( readyKind != 0xff && still )
 		{
 			m_SessionReady = true;
-			DEV_LOG( "[helper] record session ready (grenade in hand, standing still)" );
+			m_SessionKind = readyKind;
+			m_SessionArmPos = player->GetOrigin();
+			GetRenderCameraAngles( m_SessionThrowAngles );
+			m_SessionFrames.clear();
+			m_SessionSawAttack = false;
+			m_SessionTail = -1;
+			m_SessionTailDone = false;
+			m_SessionLastTick = tick;
 		}
 		return;
 	}
 
-	// 蹲姿
-	bool ducked = false;
-	if ( auto* mv = player->m_pMovementServices() )
-	{
-		auto* ms = reinterpret_cast<CCSPlayer_MovementServices*>( mv );
-		ducked = ms->m_bDucked() || ms->m_flDuckAmount() >= 0.94f;
-	}
-
-	// 空中(跳投)
-	const std::uint32_t flags = player->m_fFlags();
-	const Vector3 velocity = player->m_vecAbsVelocity();
-	const bool airborne = ( flags & 1u ) == 0u
-		|| ( std::isfinite( velocity.m_z ) && std::abs( velocity.m_z ) > 12.f );
-
-	const std::uint8_t kind = ResolveWeaponKind();
-	auto* weapon = GetCL_Weapons()->GetLocalActiveWeapon();
-
-	if ( kind == 0xff || !weapon )
-	{
-		// 手里不是雷:若此前已 armed,说明刚扔出去/切走 → 出手完成
-		if ( m_SessionPinArmed )
-		{
-			m_SessionPinArmed = false;
-			m_SessionThrew = true;
-			m_SessionThrowTick = tick;
-			if ( m_SessionJumpTick != 0 && tick > m_SessionJumpTick )
-				m_SessionAfterJumpTicks = static_cast<std::uint8_t>( std::min<std::uint32_t>( tick - m_SessionJumpTick , 255 ) );
-		}
+	// 尾巴完成:等渲染侧落盘(与菜单同线程),不再采样
+	if ( m_SessionTailDone )
 		return;
-	}
 
-	auto* grenade = reinterpret_cast<C_BaseCSGrenade*>( weapon );
-	const bool pinPulled = grenade->m_bPinPulled();
-
-	if ( !m_SessionPinArmed )
-	{
-		// 拔销:投掷动作开始,记录站位与雷类型
-		if ( pinPulled )
-		{
-			m_SessionPinArmed = true;
-			m_SessionArmTick = tick;
-			m_SessionArmPos = pos;
-			m_SessionKind = kind;
-			m_SessionRunTicks = 0;
-			m_SessionJumpTick = 0;
-			m_SessionWasAirborne = false;
-			m_SessionWasCrouch = ducked;
-			m_SessionWasWalk = false;
-		}
+	// 每 usercmd 一帧(tick 去重)
+	if ( tick == m_SessionLastTick )
 		return;
+	m_SessionLastTick = tick;
+
+	helper_timeline::Frame frame;
+	if ( !GetRenderCameraAngles( frame.angles ) )
+		frame.angles = m_SessionThrowAngles;
+	frame.position = player->GetOrigin();
+
+	// 按钮位:从本 command 的 button_states 读受管 10 位(纯读)
+	if ( m_pCmd )
+	{
+		const std::uint64_t buttons = m_pCmd->button_states.buttonstate1;
+		frame.in_attack    = ( buttons & IN_ATTACK ) != 0;
+		frame.in_attack2   = ( buttons & IN_ATTACK2 ) != 0;
+		frame.in_jump      = ( buttons & IN_JUMP ) != 0;
+		frame.in_duck      = ( buttons & IN_DUCK ) != 0;
+		frame.in_forward   = ( buttons & IN_FORWARD ) != 0;
+		frame.in_back      = ( buttons & IN_BACK ) != 0;
+		frame.in_use       = ( buttons & IN_USE ) != 0;
+		frame.in_moveleft  = ( buttons & IN_MOVELEFT ) != 0;
+		frame.in_moveright = ( buttons & IN_MOVERIGHT ) != 0;
+		frame.in_speed     = ( buttons & IN_SPEED ) != 0;
 	}
 
-	// 监视中:力度 / 跑动(按实际水平速度,不依赖 helper 按键绑定)/ 起跳
-	const float strength = grenade->m_flThrowStrength();
-	if ( std::isfinite( strength ) )
-		m_SessionStrength = strength;
+	m_SessionFrames.push_back( frame );
 
-	// 拔销后在地面移动(水平速度 > 5 u/s 视为移动,低阈值避免起步漏计)
-	// → 按游戏 tick 去重累计,窗口与执行端 DriveThrow 对齐(拔销 → 起跳/出手)
-	if ( tick != m_SessionLastTick )
+	if ( frame.in_attack )
+		m_SessionSawAttack = true;
+
+	// 雷类会话:攻击松开(雷离手)后录 32 tick 尾巴即完成
+	const bool isNade = m_SessionKind != static_cast<std::uint8_t>( resources::nades::kind::wallbang );
+	if ( isNade && m_SessionSawAttack && !frame.in_attack && m_SessionTail < 0 )
 	{
-		const float horizSpeedSqr = velocity.m_x * velocity.m_x + velocity.m_y * velocity.m_y;
-		const bool moving = std::isfinite( velocity.m_x ) && std::isfinite( velocity.m_y )
-			&& horizSpeedSqr > ( 5.f * 5.f );
-		if ( moving && !airborne )
-		{
-			++m_SessionRunTicks;
-			// 静步:跑动期间按下玩家的静步绑定键(改键后同样生效)→ action_walk
-			if ( helper::g_move_walk.active() )
-				m_SessionWasWalk = true;
-		}
-		m_SessionLastTick = tick;
+		m_SessionTail = 32;
 	}
 
-	// 起跳:记录首个空中 tick,并持续累积空中状态(覆盖"松手瞬间武器切走"的分支)
-	if ( airborne && m_SessionJumpTick == 0 )
-		m_SessionJumpTick = tick;
-	if ( airborne )
-		m_SessionWasAirborne = true;
-
-	if ( m_SessionWasCrouch == false && ducked )
-		m_SessionWasCrouch = true;
-
-	// 松手(销收回)= 出手完成
-	if ( !pinPulled )
+	if ( isNade && m_SessionTail > 0 )
 	{
-		m_SessionPinArmed = false;
-		m_SessionThrew = true;
-		m_SessionThrowTick = tick;
-		if ( m_SessionJumpTick != 0 && tick > m_SessionJumpTick )
-			m_SessionAfterJumpTicks = static_cast<std::uint8_t>( std::min<std::uint32_t>( tick - m_SessionJumpTick , 255 ) );
+		--m_SessionTail;
+		if ( m_SessionTail == 0 )
+			m_SessionTailDone = true; // 渲染侧 Tick 负责落盘
 	}
 }
 
@@ -1095,7 +908,6 @@ void CHelper::EndRecordSession()
 {
 	SaveSessionLineup();
 	m_RecordSessionActive = false;
-	DEV_LOG( "[helper] record session ended" );
 }
 
 void CHelper::SaveSessionLineup()
@@ -1104,89 +916,154 @@ void CHelper::SaveSessionLineup()
 	if ( mapName.empty() )
 		return;
 
-	auto* player = GetCL_Players()->GetLocalPlayerPawn();
-	if ( !player || !player->IsAlive() )
-		return;
-
 	auto* recorder = GetHelperRecorder();
 	if ( !recorder )
 		return;
 
 	UserLineup lineup;
-	lineup.manual = true;
+	lineup.kind = m_SessionKind;
+	lineup.x = m_SessionArmPos.m_x;
+	lineup.y = m_SessionArmPos.m_y;
+	lineup.z = m_SessionArmPos.m_z;
+	lineup.pitch = m_SessionThrowAngles.m_x;
+	lineup.yaw = m_SessionThrowAngles.m_y;
 
-	if ( m_SessionThrew && m_SessionKind != 0xff )
+	if ( m_SessionKind == static_cast<std::uint8_t>( resources::nades::kind::wallbang ) )
 	{
-		// 会话内真实投掷:用拔销站位 + 出手视角 + 动作时序
-		lineup.x = m_SessionArmPos.m_x;
-		lineup.y = m_SessionArmPos.m_y;
-		lineup.z = m_SessionArmPos.m_z;
-		lineup.pitch = m_SessionThrowAngles.m_x;
-		lineup.yaw = m_SessionThrowAngles.m_y;
-		lineup.kind = m_SessionKind;
-
-		std::uint16_t actions = 0;
-		if ( m_SessionWasCrouch )
-			actions |= nd::action_crouch;
-		if ( m_SessionRunTicks > 0 )
-			actions |= nd::action_run;
-		if ( m_SessionRunTicks > 0 && m_SessionWasWalk )
-			actions |= nd::action_walk;
-		if ( m_SessionWasAirborne )
-			actions |= nd::action_jump;
-		lineup.actions = actions;
-
-		lineup.run_ticks = std::min<std::uint32_t>( m_SessionRunTicks , 0xFFFFu );
-		lineup.after_jump_ticks = m_SessionAfterJumpTicks;
-
-		// 力度圆整到 {0.0, 0.5, 1.0}(对齐左键/右键/双键三档)
-		float strength = m_SessionStrength;
-		if ( strength < 0.25f )
-			strength = 0.f;
-		else if ( strength < 0.75f )
-			strength = 0.5f;
-		else
-			strength = 1.f;
-		lineup.throw_strength = strength;
+		// 墙点:纯站位快照(无帧);默认勾选当前手持枪
+		lineup.weapon = WeaponShortName( ActiveWeaponItem() );
+		if ( lineup.name.empty() )
+		{
+			const auto* existing = recorder->Get( mapName );
+			int wallCount = 1;
+			if ( existing )
+				for ( const auto& lu : *existing )
+					if ( lu.kind == static_cast<std::uint8_t>( resources::nades::kind::wallbang ) )
+						++wallCount;
+			lineup.name = "Wall " + std::to_string( wallCount );
+		}
 	}
 	else
 	{
-		// 会话内没投掷:退化为当前快照(点一下关闭也要保存)
-		const std::uint8_t kind = ResolveWeaponKind();
-		if ( kind == 0xff )
+		// 雷类:时间线点位(要求真的出了手;没出手不保存)
+		if ( m_SessionFrames.empty() || !m_SessionSawAttack || m_SessionTail < 0 )
+		{
+			DEV_LOG( "[helper] nade session discarded (no throw)" );
 			return;
-		const Vector3 pos = player->GetOrigin();
-		lineup.x = pos.m_x;
-		lineup.y = pos.m_y;
-		lineup.z = pos.m_z;
-		lineup.pitch = m_SessionThrowAngles.m_x;
-		lineup.yaw = m_SessionThrowAngles.m_y;
-		lineup.kind = kind;
-		lineup.actions = 0;
-		lineup.run_ticks = 0;
-		lineup.after_jump_ticks = 0;
-		lineup.throw_strength = 1.f;
-	}
-
-	// 动作标签 + 自动命名(对齐内置点位:run+walk 显示 Walk+,纯 run 显示 Run+)
-	lineup.action = CHelperRecorder::BuildActionLabel( lineup.actions );
-
-	// 名字:优先用面板输入框的名字,空则自动 Custom N
-	if ( !m_RecordName.empty() )
-		lineup.name = m_RecordName;
-	else
-	{
-		const auto* existing = recorder->Get( mapName );
-		const int count = existing ? static_cast<int>( existing->size() ) : 0;
-		lineup.name = "Custom " + std::to_string( count + 1 );
+		}
+		lineup.frames = m_SessionFrames;
+		if ( lineup.name.empty() )
+		{
+			const auto* existing = recorder->Get( mapName );
+			const int count = existing ? static_cast<int>( existing->size() ) : 0;
+			lineup.name = "Custom " + std::to_string( count + 1 );
+		}
 	}
 
 	const int index = recorder->Add( mapName , lineup );
-	DEV_LOG( "[helper] saved session %s on %s (idx=%d kind=%u str=%.2f run=%u aj=%u)" ,
-		lineup.name.c_str() , mapName.c_str() , index , lineup.kind ,
-		lineup.throw_strength , lineup.run_ticks , lineup.after_jump_ticks );
+	DEV_LOG( "[helper] saved %s on %s (idx=%d kind=%u frames=%zu)" ,
+		lineup.name.c_str() , mapName.c_str() , index , lineup.kind , lineup.frames.size() );
 }
 
+// ============================================================================
+// 墙点执行:走到位 → 瞄准 → 就绪。Crouch/Jump 动作只作点位标注(名牌/描点文字),
+// 执行端不注入任何蹲/跳/助跑键,开枪交给 rage/玩家。
+// ============================================================================
+void CHelper::ResetWallbangAction()
+{
+	m_WallPhase = WallPhase::Idle;
+}
+
+void CHelper::DriveWallbang( const Vector3& playerPos , const QAngle& viewAngles , std::uint32_t tick , std::chrono::steady_clock::time_point now )
+{
+	// 收集当前手持武器对应的墙点(用户录制,kind=wallbang,且武器集合含当前枪)
+	if ( !Collect( playerPos , static_cast<std::uint8_t>( nd::kind::wallbang ) , m_TickScratch ) )
+	{
+		ResetLock();
+		ResetWallbangAction();
+		return;
+	}
+
+	const int index = SelectArmed( m_TickScratch , viewAngles );
+	if ( index < 0 )
+	{
+		m_AimErrorX = m_AimErrorY = 0.f;
+		ResetLock();
+		ResetWallbangAction();
+		return;
+	}
+
+	const auto& lineup = m_TickScratch[ static_cast<std::size_t>( index ) ];
+	float error = AngleError( viewAngles , lineup.pitch , lineup.yaw );
+	if ( menu_state::autoAim )
+		AimAt( lineup , viewAngles , error );
+
+	const bool positionReady = ExecutionPositionReady( lineup , playerPos );
+
+	// 自动走位:不到位时走向点位,到位反向刹车(与投掷点位同一套)
+	if ( menu_state::autoMove )
+	{
+		if ( !positionReady )
+		{
+			DriveToPoint( lineup , playerPos , viewAngles );
+			m_Braking = false;
+			ResetWallbangAction(); // 未到位前不做动作播放
+		}
+		else if ( !m_Braking
+			&& ( m_Forward.pressed || m_Back.pressed || m_Left.pressed || m_Right.pressed ) )
+		{
+			m_Braking = true;
+			m_BrakeStart = now;
+			m_BrakeF = m_Forward.pressed;
+			m_BrakeB = m_Back.pressed;
+			m_BrakeL = m_Left.pressed;
+			m_BrakeR = m_Right.pressed;
+			const Vector3 bv = GetCL_Players()->GetLocalPlayerPawn()->m_vecAbsVelocity();
+			m_BrakeSpeed = std::sqrtf( bv.m_x * bv.m_x + bv.m_y * bv.m_y );
+			SetControl( m_Forward , false );
+			SetControl( m_Back , false );
+			SetControl( m_Left , false );
+			SetControl( m_Right , false );
+			SetBrakeKeys( true );
+		}
+		else if ( m_Braking )
+		{
+			const Vector3 cv = GetCL_Players()->GetLocalPlayerPawn()->m_vecAbsVelocity();
+			const float curSpeed = std::sqrtf( cv.m_x * cv.m_x + cv.m_y * cv.m_y );
+			const float brakeMs = std::clamp( m_BrakeSpeed * 0.5f , 30.f , 120.f );
+			if ( curSpeed <= 12.f
+				|| now - m_BrakeStart >= std::chrono::milliseconds( static_cast<int>( brakeMs ) ) )
+			{
+				ReleaseMovement( false );
+				m_Braking = false;
+			}
+			else
+			{
+				SetBrakeKeys( true );
+			}
+		}
+	}
+	else
+	{
+		ReleaseMovement( false );
+		m_Braking = false;
+		m_Coasting = false;
+	}
+
+	// 站定后即就绪:动作(Crouch/Jump)只是标注,执行端不注入任何键,等 rage/玩家开火
+	if ( positionReady && !m_Braking )
+		m_WallPhase = WallPhase::Ready;
+
+	// 就绪 = 走位到位 + 视角对准;完成后不再注入,交给 rage/玩家开火
+	if ( m_WallPhase == WallPhase::Ready )
+	{
+		if ( error <= menu_state::aimThreshold )
+		{
+			m_AimErrorX = m_AimErrorY = 0.f;
+			m_LastAimUpdate = {};
+		}
+	}
+}
 
 bool CHelper::Collect( const Vector3& playerPos , std::uint8_t weaponKind , std::vector<LineupView>& out ) const
 {
@@ -1204,7 +1081,6 @@ bool CHelper::Collect( const Vector3& playerPos , std::uint8_t weaponKind , std:
 		return false;
 
 	const std::string mapName = NormalizeMapName( mapRaw );
-	const auto* map = FindMap( mapName );
 
 	const int drawDistance = menu_state::drawDistance;
 	const float maxDistanceSqr = static_cast<float>( drawDistance ) * drawDistance;
@@ -1214,57 +1090,36 @@ bool CHelper::Collect( const Vector3& playerPos , std::uint8_t weaponKind , std:
 	if ( auto* recorder = GetHelperRecorder() )
 		userLineups = recorder->Get( mapName );
 
-	// 查某条内置点位是否被用户覆盖(返回覆盖条目指针,无则 nullptr)
-	auto findOverride = [&]( std::uint32_t builtinIndex ) -> const UserLineup*
+	// 点位库(时间线):替代内置参数表,按地图 + 武器类型 + 距离过滤
+	if ( helper_timeline::Ready() )
 	{
-		if ( !userLineups )
-			return nullptr;
-		for ( const auto& lu : *userLineups )
-			if ( lu.override_builtin_index == static_cast<int>( builtinIndex ) )
-				return &lu;
-		return nullptr;
-	};
-
-	// 内置点位表(某些地图可能没有,此时仅用用户录制点位)。
-	if ( map )
-	{
-		for ( std::uint32_t i = 0; i < map->count; ++i )
+		if ( const auto* points = helper_timeline::GetMapPoints( mapName ) )
 		{
-			const auto& entry = map->data[ i ];
-			if ( static_cast<std::uint8_t>( entry.type ) != weaponKind )
-				continue;
-
-			// 有覆盖:隐藏则不显示不参与;否则用覆盖版本替代内置原条目
-			if ( const auto* ov = findOverride( i ) )
+			for ( const auto& point : *points )
 			{
-				if ( ov->hidden )
-					continue; // 该内置点位被用户隐藏
-				if ( ov->kind != weaponKind )
+				if ( point.kind != weaponKind )
 					continue;
-				const Vector3 position{ ov->x , ov->y , ov->z };
-				const float distanceSqr = ( position - playerPos ).LengthSquared();
+				if ( point.hidden )
+					continue; // 被用户隐藏的内置点位
+
+				const float distanceSqr = ( point.position - playerPos ).LengthSquared();
 				if ( distanceSqr > maxDistanceSqr )
 					continue;
-				out.push_back( LineupView{
-					ov->name , ov->action , position , ov->pitch , ov->yaw ,
-					ov->kind ,
-					ov->actions , ov->run_ticks , ov->after_jump_ticks , ov->throw_strength , ov->manual ,
-					std::sqrtf( distanceSqr ) ,
-				} );
-				continue;
+
+				// 瞄准目标 = 首帧视角(回放会逐帧驱动视角到各帧角度)
+				const QAngle aimAngles = !point.frames.empty() ? point.frames.front().angles : point.angles;
+
+				LineupView view;
+				view.name = point.name;
+				view.position = point.position;
+				view.pitch = aimAngles.m_x;
+				view.yaw = aimAngles.m_y;
+				view.kind = point.kind;
+				view.distance = std::sqrtf( distanceSqr );
+				view.frames = point.frames.data();
+				view.frameCount = point.frames.size();
+				out.push_back( std::move( view ) );
 			}
-
-			const Vector3 position{ entry.x , entry.y , entry.z };
-			const float distanceSqr = ( position - playerPos ).LengthSquared();
-			if ( distanceSqr > maxDistanceSqr )
-				continue;
-
-			out.push_back( LineupView{
-				entry.name , entry.action , position , entry.pitch , entry.yaw ,
-				static_cast<std::uint8_t>( entry.type ) ,
-				entry.actions , entry.run_ticks , entry.after_jump_ticks , entry.throw_strength , entry.manual ,
-				std::sqrtf( distanceSqr ) ,
-			} );
 		}
 	}
 
@@ -1273,24 +1128,40 @@ bool CHelper::Collect( const Vector3& playerPos , std::uint8_t weaponKind , std:
 	{
 		for ( const auto& lu : *userLineups )
 		{
-			if ( lu.override_builtin_index >= 0 )
-				continue; // 覆盖条目不重复收集
 			if ( lu.hidden )
 				continue; // 被用户隐藏的录制点位
 			if ( lu.kind != weaponKind )
 				continue;
+
+			// 墙点:weapon = 逗号分隔的可用枪列表;不含当前手持枪则不显示/参与
+			if ( lu.kind == static_cast<std::uint8_t>( nd::kind::wallbang ) )
+			{
+				const std::string cur = WeaponShortName( ActiveWeaponItem() );
+				if ( !WallbangWeaponsContain( lu.weapon , cur ) )
+					continue;
+			}
 
 			const Vector3 position{ lu.x , lu.y , lu.z };
 			const float distanceSqr = ( position - playerPos ).LengthSquared();
 			if ( distanceSqr > maxDistanceSqr )
 				continue;
 
-			out.push_back( LineupView{
-				lu.name , lu.action , position , lu.pitch , lu.yaw ,
-				lu.kind ,
-				lu.actions , lu.run_ticks , lu.after_jump_ticks , lu.throw_strength , lu.manual ,
-				std::sqrtf( distanceSqr ) ,
-			} );
+			LineupView view;
+			view.name = lu.name;
+			view.position = position;
+			view.pitch = lu.pitch;
+			view.yaw = lu.yaw;
+			view.kind = lu.kind;
+			view.distance = std::sqrtf( distanceSqr );
+			view.weapon = lu.weapon;      // 墙点:存武器集合(名牌取当前手持枪图标)
+			view.annotations = lu.annotations; // 墙点:Crouch/Jump 标注
+			if ( !lu.frames.empty() )
+			{
+				// 时间线点位(自录):走时间线回放引擎
+				view.frames = lu.frames.data();
+				view.frameCount = lu.frames.size();
+			}
+			out.push_back( std::move( view ) );
 		}
 	}
 
@@ -1473,6 +1344,13 @@ void CHelper::ResetLock()
 	m_LockYaw = 0.f;
 }
 
+// 卸载路径:释放当前注入按住的所有键并复位状态机(CDllLauncher::OnDestroy 调用)
+auto CHelper::OnUnload() -> void
+{
+	CancelThrow( false );
+	ResetWallbangAction();
+}
+
 void CHelper::CancelThrow( bool latch )
 {
 	ReleaseAttacks();
@@ -1483,18 +1361,208 @@ void CHelper::CancelThrow( bool latch )
 	m_Jump = {};
 	m_Attack = {};
 	m_Attack2 = {};
-	m_ActiveLineup = {};
-	m_ActivePawn = 0;
-	m_ActiveWeapon = 0;
-	m_ThrowPhase = ThrowPhase::Idle;
-	m_PhaseTick = 0;
-	m_RunStartTick = 0;
-	m_JumpTick = 0;
 	m_AimErrorX = m_AimErrorY = 0.f;
 	m_LastAimUpdate = {};
 	m_Braking = false;
 	ResetLock();
+	// 时间线回放一并复位(所有守卫路径都经这里,保证按钮掩码被释放)
+	m_TimelineActive = false;
+	m_TimelineFrames.clear();
+	m_TimelineName.clear();
+	m_TimelineKind = 0xff;
+	m_TimelineInjected = 0;
+	m_TimelineFirstAttack = 0;
+	m_TimelineStartTickSet = false;
 	m_ActivationLatched = latch;
+}
+
+// ============================================================================
+// 时间线回放(点位库):逐帧按钮 diff 注入 + 视角闭环注入,全部外部输出
+// ============================================================================
+OwnedControl* CHelper::TimelineControl( std::uint64_t bit )
+{
+	switch ( bit )
+	{
+	case IN_ATTACK:    return &m_Attack;
+	case IN_ATTACK2:   return &m_Attack2;
+	case IN_JUMP:      return &m_Jump;
+	case IN_DUCK:      return &m_Duck;
+	case IN_FORWARD:   return &m_Forward;
+	case IN_BACK:      return &m_Back;
+	case IN_MOVELEFT:  return &m_Left;
+	case IN_MOVERIGHT: return &m_Right;
+	case IN_SPEED:     return &m_Walk;
+	}
+	return nullptr;
+}
+
+namespace
+{
+	InputAction TimelineActionOf( std::uint64_t bit )
+	{
+		switch ( bit )
+		{
+		case IN_ATTACK:    return InputAction::Attack;
+		case IN_ATTACK2:   return InputAction::Attack2;
+		case IN_JUMP:      return InputAction::Jump;
+		case IN_DUCK:      return InputAction::Duck;
+		case IN_FORWARD:   return InputAction::Forward;
+		case IN_BACK:      return InputAction::Back;
+		case IN_MOVELEFT:  return InputAction::Left;
+		case IN_MOVERIGHT: return InputAction::Right;
+		case IN_SPEED:     return InputAction::Walk;
+		}
+		return InputAction::Forward;
+	}
+}
+
+void CHelper::ApplyTimelineButtons( std::uint64_t target )
+{
+	static constexpr std::uint64_t kBits[] =
+		{ IN_ATTACK, IN_ATTACK2, IN_JUMP, IN_DUCK, IN_FORWARD, IN_BACK, IN_MOVELEFT, IN_MOVERIGHT, IN_SPEED };
+
+	for ( const std::uint64_t bit : kBits )
+	{
+		const bool want = ( target & bit ) != 0;
+		const bool have = ( m_TimelineInjected & bit ) != 0;
+		if ( want == have )
+			continue;
+
+		if ( OwnedControl* control = TimelineControl( bit ) )
+		{
+			control->binding = ResolveBinding( TimelineActionOf( bit ) );
+			SetControl( *control , want );
+		}
+		m_TimelineInjected = want ? ( m_TimelineInjected | bit ) : ( m_TimelineInjected & ~bit );
+	}
+}
+
+void CHelper::StartTimelinePlayback( const helper_timeline::Frame* frames , std::size_t count ,
+	const std::string& name , std::uint8_t kind )
+{
+	CancelThrow( false );
+	if ( !frames || count == 0 )
+	{
+		m_ActivationLatched = true;
+		return;
+	}
+
+	m_TimelineActive = true;
+	m_TimelineFrames.assign( frames , frames + count );
+	m_TimelineName = name;
+	m_TimelineKind = kind;
+	m_TimelineStartTickSet = false;
+	m_TimelineLastTick = 0;
+	m_TimelineInjected = 0;
+	m_TimelineFirstAttack = 0;
+
+	DEV_LOG( "[timeline] start '%s' frames=%zu" , name.c_str() , count );
+}
+
+void CHelper::CancelTimelinePlayback()
+{
+	if ( m_TimelineActive )
+		CancelThrow( false );
+}
+
+void CHelper::UpdateTimelinePlayback()
+{
+	if ( !m_TimelineActive || m_TimelineFrames.empty() )
+		return;
+
+	auto* player = GetCL_Players()->GetLocalPlayerPawn();
+	if ( !player || !player->IsAlive() )
+	{
+		CancelThrow( true );
+		return;
+	}
+
+	const std::uint32_t tick = TickCount();
+	if ( !m_TimelineStartTickSet )
+	{
+		m_TimelineStartTick = tick;
+		m_TimelineStartTickSet = true;
+		m_TimelineLastTick = tick;
+	}
+
+	// 同一游戏 tick 的多次渲染:不推帧(按钮掩码按当前帧保持)
+	if ( tick == m_TimelineLastTick )
+		return;
+
+	const int elapsed = static_cast<int>( tick - m_TimelineStartTick );
+	m_TimelineLastTick = tick;
+
+	const auto& frames = m_TimelineFrames;
+	if ( elapsed >= static_cast<int>( frames.size() ) )
+	{
+		ApplyTimelineButtons( 0 ); // 全部松开
+		DEV_LOG( "[timeline] finished '%s'" , m_TimelineName.c_str() );
+		CancelThrow( true );
+		return;
+	}
+
+	const auto& frame = frames[ static_cast<std::size_t>( elapsed ) ];
+
+	// firstAttackStep 保护:首个攻击帧起强制保持攻击,直到帧序列明确松开
+	// (防录制帧序列 attack 不完整导致提前投掷)
+	if ( m_TimelineFirstAttack == 0 )
+	{
+		m_TimelineFirstAttack = -1;
+		for ( std::size_t i = 0; i < frames.size(); ++i )
+		{
+			if ( frames[ i ].in_attack || frames[ i ].in_attack2 )
+			{
+				m_TimelineFirstAttack = static_cast<int>( i ) + 1;
+				break;
+			}
+		}
+	}
+
+	std::uint64_t mask = 0;
+	if ( frame.in_attack )    mask |= IN_ATTACK;
+	if ( frame.in_attack2 )   mask |= IN_ATTACK2;
+	if ( frame.in_jump )      mask |= IN_JUMP;
+	if ( frame.in_duck )      mask |= IN_DUCK;
+	if ( frame.in_forward )   mask |= IN_FORWARD;
+	if ( frame.in_back )      mask |= IN_BACK;
+	if ( frame.in_moveleft )  mask |= IN_MOVELEFT;
+	if ( frame.in_moveright ) mask |= IN_MOVERIGHT;
+	if ( frame.in_speed )     mask |= IN_SPEED;
+	if ( frame.in_use )       mask |= IN_USE;
+
+	if ( m_TimelineFirstAttack > 0 && m_TimelineFirstAttack <= elapsed + 1 )
+	{
+		mask |= IN_ATTACK | IN_ATTACK2;
+		if ( !frame.in_attack )
+			mask &= ~IN_ATTACK;
+		if ( !frame.in_attack2 )
+			mask &= ~IN_ATTACK2;
+	}
+
+	ApplyTimelineButtons( mask );
+
+	// 视角:每渲染帧向该帧录制视角做闭环注入(绝对目标,无漂移)
+	if ( QAngle current; GetRenderCameraAngles( current ) )
+	{
+		const float dP = frame.angles.m_x - current.m_x;
+		const float dY = WrapYaw( frame.angles.m_y - current.m_y );
+		int dx = 0 , dy = 0;
+		if ( MouseDeltaCounts( dP , dY , dx , dy ) && ( dx != 0 || dy != 0 ) )
+			InjectMouse( dx , dy , MOUSEEVENTF_MOVE );
+	}
+
+	// 漂移检测:实际位置偏离录制轨迹过多即中止(点位数据 p 覆盖率 100%)
+	if ( frame.position.LengthSquared() > 0.01f )
+	{
+		const Vector3 delta = player->GetOrigin() - frame.position;
+		if ( delta.LengthSquared() > 48.f * 48.f )
+		{
+			DEV_LOG( "[timeline] drift %.1fu @frame %d,abort '%s'" ,
+				delta.Length() , elapsed , m_TimelineName.c_str() );
+			ApplyTimelineButtons( 0 );
+			CancelThrow( true );
+		}
+	}
 }
 
 // ============================================================================
@@ -1560,288 +1628,45 @@ void CHelper::AimAt( const LineupView& lineup , const QAngle& viewAngles , float
 }
 
 // ============================================================================
-// 投掷状态机
+// 手雷轨迹 PiP 预览:状态机派生输出(锁定待投 或 投掷执行中),每帧 Tick 开头调用
 // ============================================================================
-bool CHelper::BeginThrow( const LineupView& lineup , std::uintptr_t pawn , std::uintptr_t weapon , std::uint32_t tick , std::chrono::steady_clock::time_point now )
+static constexpr int kPreviewHoldMs = 500;
+
+void CHelper::UpdateGrenadePreview()
 {
-	CancelThrow( false );
-	m_ActiveLineup = lineup;
-	m_ActivePawn = pawn;
-	m_ActiveWeapon = weapon;
-	m_PhaseTick = tick;
-	m_PhaseStarted = now;
+	// ① 锁定待投: 已锁定 且 未 latch(出手前),与 Tick 里 settled 同口径
+	const bool lockedReady = m_LockStarted != std::chrono::steady_clock::time_point{}
+		&& !m_ActivationLatched
+		&& Now() - m_LockStarted >= std::chrono::milliseconds(
+			std::clamp( menu_state::lockTimeMs , 0 , 250 ) );
 
-	if ( lineup.actions & nd::action_run ) m_Forward.binding = ResolveBinding( InputAction::Forward );
-	if ( lineup.actions & nd::action_walk ) m_Walk.binding = ResolveBinding( InputAction::Walk );
-	if ( lineup.actions & nd::action_crouch ) m_Duck.binding = ResolveBinding( InputAction::Duck );
-	if ( lineup.actions & nd::action_jump ) m_Jump.binding = ResolveBinding( InputAction::Jump );
+	// ② 投掷状态机运行中(Crouching→Priming→Running→Jumping→Complete)
+	const bool throwing = m_TimelineActive; // 时间线回放中(含动作阶段)
 
-	if ( lineup.throw_strength >= 0.75f )
-		m_Attack.binding = ResolveBinding( InputAction::Attack );
-	else if ( lineup.throw_strength <= 0.25f )
-		m_Attack2.binding = ResolveBinding( InputAction::Attack2 );
-	else
-	{
-		m_Attack.binding = ResolveBinding( InputAction::Attack );
-		m_Attack2.binding = ResolveBinding( InputAction::Attack2 );
-	}
+	// 条件满足 = 想开,并刷新"最后激活时刻"
+	const bool wantOn = menu_state::grenadePreview && ( lockedReady || throwing );
+	const auto now = Now();
+	if ( wantOn )
+		m_PreviewLastActive = now;
 
-	const bool missing = ( ( lineup.actions & nd::action_run ) && !m_Forward.binding )
-		|| ( ( lineup.actions & nd::action_walk ) && !m_Walk.binding )
-		|| ( ( lineup.actions & nd::action_crouch ) && !m_Duck.binding )
-		|| ( ( lineup.actions & nd::action_jump ) && !m_Jump.binding )
-		|| ( lineup.throw_strength >= 0.75f && !m_Attack.binding )
-		|| ( lineup.throw_strength <= 0.25f && !m_Attack2.binding )
-		|| ( lineup.throw_strength > 0.25f && lineup.throw_strength < 0.75f
-			&& ( !m_Attack.binding || !m_Attack2.binding ) );
-	if ( missing )
-	{
-		DEV_LOG( "[helper] begin_throw missing bindings (actions=%u str=%.2f fwd=%d/%d walk=%d/%d duck=%d/%d jump=%d/%d atk=%d atk2=%d)" ,
-			lineup.actions , lineup.throw_strength ,
-			m_Forward.binding.virtualKey , (int)m_Forward.binding.device ,
-			m_Walk.binding.virtualKey , (int)m_Walk.binding.device ,
-			m_Duck.binding.virtualKey , (int)m_Duck.binding.device ,
-			m_Jump.binding.virtualKey , (int)m_Jump.binding.device ,
-			(int)m_Attack.binding.device , (int)m_Attack2.binding.device );
-		CancelThrow( true );
-		return false;
-	}
+	const bool on = menu_state::grenadePreview
+		&& ( wantOn
+			|| ( m_PreviewLastActive != std::chrono::steady_clock::time_point{}
+				&& now - m_PreviewLastActive < std::chrono::milliseconds( kPreviewHoldMs ) ) );
 
-	if ( lineup.actions & nd::action_crouch )
-	{
-		if ( !SetControl( m_Duck , true ) )
-		{
-			DEV_LOG( "[helper] begin_throw: duck set_control failed" );
-			CancelThrow( true );
-			return false;
-		}
-		m_ThrowPhase = ThrowPhase::Crouching;
-		return true;
-	}
-
-	if ( !PrimeThrow( tick , now ) )
-	{
-		DEV_LOG( "[helper] begin_throw: prime_throw failed" );
-		CancelThrow( true );
-		return false;
-	}
-	return true;
+	WriteGrenadePreview( on );
 }
 
-bool CHelper::PrimeThrow( std::uint32_t tick , std::chrono::steady_clock::time_point now )
+void CHelper::WriteGrenadePreview( bool on )
 {
-	const float strength = m_ActiveLineup.throw_strength;
-	if ( strength >= 0.75f )
+	// 给 convar 补 FCVAR_CLIENTCMD_CAN_EXECUTE 标志 + 每帧直写值,防 replicated 被服务器刷回
+	static CConVar* s_pipreview = nullptr;
+	if ( !s_pipreview )
+		s_pipreview = SDK::Interfaces::EngineCvar()->Find( "sv_grenade_trajectory_prac_pipreview" );
+	if ( s_pipreview )
 	{
-		if ( !SetControl( m_Attack , true ) )
-		{
-			DEV_LOG( "[helper] prime: attack LMB failed" );
-			return false;
-		}
-		DEV_LOG( "[helper] prime: LMB down (str=%.2f)" , strength );
-	}
-	else if ( strength <= 0.25f )
-	{
-		if ( !SetControl( m_Attack2 , true ) )
-		{
-			DEV_LOG( "[helper] prime: attack2 RMB failed" );
-			return false;
-		}
-		DEV_LOG( "[helper] prime: RMB down (str=%.2f)" , strength );
-	}
-	else if ( m_Attack.binding.device == InputDevice::MousePrimary
-		&& m_Attack2.binding.device == InputDevice::MouseSecondary )
-	{
-		SimulateMouseButton( MOUSEEVENTF_LEFTDOWN , MOUSEEVENTF_LEFTUP , true );
-		SimulateMouseButton( MOUSEEVENTF_RIGHTDOWN , MOUSEEVENTF_RIGHTUP , true );
-		m_Attack.pressed = true;
-		m_Attack2.pressed = true;
-		DEV_LOG( "[helper] prime: LMB+RMB down (str=%.2f)" , strength );
-	}
-	else if ( !SetControl( m_Attack , true ) || !SetControl( m_Attack2 , true ) )
-	{
-		DEV_LOG( "[helper] prime: dual set_control failed" );
-		return false;
-	}
-
-	m_ThrowPhase = ThrowPhase::Priming;
-	m_PhaseTick = tick;
-	m_PhaseStarted = now;
-	return true;
-}
-
-void CHelper::FinishThrow( std::uint32_t tick )
-{
-	// 蹲投点位:先松开投掷键(投出),保留蹲姿;由 Complete 阶段延迟松蹲,避免"起来时投掷"
-	if ( m_ActiveLineup.actions & nd::action_crouch )
-	{
-		ReleaseAttacks();
-		m_ActivationLatched = true;
-		m_PhaseTick = tick;
-		m_PhaseStarted = Now();
-		m_ThrowPhase = ThrowPhase::Complete;
-		return;
-	}
-
-	const bool releaseAfter = ( m_ActiveLineup.actions & nd::action_release_movement_after_throw ) != 0;
-	if ( releaseAfter )
-	{
-		ReleaseAttacks();
-		ReleaseMovement( false );
-	}
-	else
-	{
-		ReleaseMovement( false );
-		ReleaseAttacks();
-	}
-
-	m_ActivationLatched = true;
-	m_PhaseTick = tick;
-	if ( m_ActiveLineup.actions & nd::action_jump )
-		m_ThrowPhase = ThrowPhase::Complete;
-	else
-		CancelThrow( true );
-}
-
-void CHelper::DriveThrow( std::uintptr_t pawn , std::uintptr_t weapon , std::uint32_t tick , std::chrono::steady_clock::time_point now )
-{
-	switch ( m_ThrowPhase )
-	{
-	case ThrowPhase::Crouching:
-	{
-		float duckAmount = 0.f;
-		bool ducked = false;
-		if ( auto* mv = reinterpret_cast<C_CSPlayerPawn*>( pawn )->m_pMovementServices() )
-		{
-			auto* ms = reinterpret_cast<CCSPlayer_MovementServices*>( mv );
-			duckAmount = ms->m_flDuckAmount();
-			ducked = ms->m_bDucked();
-		}
-		if ( ducked || duckAmount >= 0.94f )
-		{
-			if ( !PrimeThrow( tick , now ) )
-				CancelThrow( true );
-		}
-		else if ( now - m_PhaseStarted > std::chrono::milliseconds( 900 ) )
-		{
-			DEV_LOG( "[helper] crouch timeout: duckAmount=%.2f ducked=%d" , duckAmount , ducked ? 1 : 0 );
-			CancelThrow( true );
-		}
-		return;
-	}
-	case ThrowPhase::Priming:
-	{
-		auto* grenade = reinterpret_cast<C_BaseCSGrenade*>( weapon );
-		bool pinPulled = false;
-		float strength = -1.f;
-		if ( grenade )
-		{
-			pinPulled = grenade->m_bPinPulled();
-			strength = grenade->m_flThrowStrength();
-		}
-
-		const float target = m_ActiveLineup.throw_strength;
-		const bool ready = pinPulled && std::isfinite( strength )
-			&& std::abs( strength - target ) <= 0.08f
-			&& tick != m_PhaseTick;
-		if ( !ready )
-		{
-			if ( now - m_PhaseStarted > std::chrono::milliseconds( 3000 ) )
-			{
-				DEV_LOG( "[helper] priming timeout: pin=%d str=%.3f target=%.3f phaseTick=%u tick=%u" ,
-					pinPulled ? 1 : 0 , strength , target , m_PhaseTick , tick );
-				CancelThrow( true );
-			}
-			return;
-		}
-
-		if ( m_ActiveLineup.actions & nd::action_run )
-		{
-			if ( !m_Forward.pressed )
-			{
-				// 内置点位模型:跑动固定向前(W),录制 run_ticks 口径与此一致
-				if ( ( m_ActiveLineup.actions & nd::action_walk ) && !SetControl( m_Walk , true ) )
-				{
-					CancelThrow( true );
-					return;
-				}
-				if ( !SetControl( m_Forward , true ) )
-				{
-					CancelThrow( true );
-					return;
-				}
-				m_RunStartTick = tick;
-			}
-			m_ThrowPhase = ThrowPhase::Running;
-			if ( tick - m_RunStartTick < m_ActiveLineup.run_ticks )
-				return;
-		}
-		else if ( !( m_ActiveLineup.actions & nd::action_jump ) )
-		{
-			FinishThrow( tick );
-			return;
-		}
-		[[fallthrough]];
-	}
-	case ThrowPhase::Running:
-		if ( tick - m_RunStartTick < m_ActiveLineup.run_ticks )
-			return;
-		if ( m_ActiveLineup.actions & nd::action_jump )
-		{
-			if ( !SetControl( m_Jump , true ) )
-			{
-				CancelThrow( true );
-				return;
-			}
-			m_JumpTick = tick;
-			m_PhaseStarted = now;
-			m_ThrowPhase = ThrowPhase::Jumping;
-		}
-		else
-			FinishThrow( tick );
-		return;
-	case ThrowPhase::Jumping:
-	{
-		const std::uint32_t elapsedTicks = tick - m_JumpTick;
-		const auto afterJump = m_ActiveLineup.after_jump_ticks;
-		if ( elapsedTicks < afterJump )
-			return;
-
-		if ( afterJump == 0 )
-		{
-			if ( now > m_PhaseStarted )
-				FinishThrow( tick );
-			return;
-		}
-
-		auto* player = reinterpret_cast<C_CSPlayerPawn*>( pawn );
-		const std::uint32_t flags = player->m_fFlags();
-		const Vector3 velocity = player->m_vecAbsVelocity();
-		const bool airborne = ( flags & 1u ) == 0u
-			|| ( std::isfinite( velocity.m_z ) && std::abs( velocity.m_z ) > 12.f );
-		if ( airborne )
-		{
-			FinishThrow( tick );
-			return;
-		}
-
-		if ( now - m_PhaseStarted > std::chrono::milliseconds( 250 ) )
-			CancelThrow( true );
-		return;
-	}
-	case ThrowPhase::Complete:
-		// 蹲投点位:投掷后保持蹲姿一小段再起立,避免"起来时投掷"
-		if ( m_ActiveLineup.actions & nd::action_crouch )
-		{
-			if ( now - m_PhaseStarted >= std::chrono::milliseconds( 250 ) )
-				CancelThrow( true );
-			return;
-		}
-		if ( tick != m_PhaseTick )
-			CancelThrow( true );
-		return;
-	default:
-		return;
+		s_pipreview->nFlags |= FCVAR_CLIENTCMD_CAN_EXECUTE;   // 允许客户端设置
+		s_pipreview->value.i1 = on;           // 开=1,关=0(每帧保活/还原)
 	}
 }
 
@@ -1850,8 +1675,12 @@ void CHelper::DriveThrow( std::uintptr_t pawn , std::uintptr_t weapon , std::uin
 // ============================================================================
 void CHelper::Tick()
 {
-	// 录制键(toggle 类型):按下开始录制会话,再按一下结束并保存。
-	// 会话中跟踪移动(run_ticks)/起跳(after_jump_ticks)/蹲姿/力度/出手视角。
+	// 手雷轨迹 PiP 预览:每帧开头统一派生(7 个提前 return 路径之后都不需要再管)
+	UpdateGrenadePreview();
+
+	// 录制键(toggle 会话,雷与墙点一致):按下开始,再按结束保存。
+	// 会话内的状态采样在 OnCreateMove 每 tick 执行;边沿检测留在渲染侧,
+	// 避免与菜单(也会轮询该 toggle 键)及录制表读写产生跨线程竞争。
 	const bool recActive = helper::g_record_key.active();
 	if ( recActive && !m_RecordKeyPrev )
 		BeginRecordSession();
@@ -1859,13 +1688,11 @@ void CHelper::Tick()
 		EndRecordSession();
 	m_RecordKeyPrev = recActive;
 
-	if ( m_RecordSessionActive )
-		UpdateRecordSession();
-
 	if ( !menu_state::helperEnabled )
 	{
 		// 无条件释放所有注入键(含走位方向键),避免方向键卡住
 		CancelThrow( false );
+		ResetWallbangAction();
 		m_ActivationLatched = false;
 		ResetLock();
 		return;
@@ -1876,9 +1703,7 @@ void CHelper::Tick()
 	{
 		// 无条件释放所有注入键(含走位方向键),避免松开热键后一直走
 		CancelThrow( false );
-		m_ActivationLatched = false;
-		m_AimErrorX = m_AimErrorY = 0.f;
-		ResetLock();
+		ResetWallbangAction();
 		m_ActivationLatched = false;
 		m_AimErrorX = m_AimErrorY = 0.f;
 		ResetLock();
@@ -1886,49 +1711,72 @@ void CHelper::Tick()
 	}
 
 	auto* player = GetCL_Players()->GetLocalPlayerPawn();
-	auto* weapon = GetCL_Weapons()->GetLocalActiveWeapon();
-	if ( !player || !player->IsAlive() || !weapon || !GameHasInputFocus() || player->m_bIsBuyMenuOpen() )
+	if ( !player || !player->IsAlive() || !GameHasInputFocus() || player->m_bIsBuyMenuOpen() )
 	{
 		CancelThrow( activationHeld );
+		ResetWallbangAction();
 		m_AimErrorX = m_AimErrorY = 0.f;
 		return;
 	}
 
-	// 回合冻结/回合介绍/暂停时不投掷
+	// 回合冻结/回合介绍/暂停时不执行
 	if ( void* rules = SDK::Pointers::GameRules() )
 	{
 		auto* csRules = reinterpret_cast<C_CSGameRules*>( rules );
 		if ( csRules->m_bFreezePeriod() || csRules->m_bTeamIntroPeriod() || csRules->m_bGamePaused() )
 		{
 			CancelThrow( activationHeld );
+			ResetWallbangAction();
 			m_AimErrorX = m_AimErrorY = 0.f;
 			return;
 		}
 	}
 
 	const std::uint8_t kind = ResolveWeaponKind();
+
+	// ---- 墙点(穿点):走位/动作复现,不投掷不开枪 ----
+	if ( kind == static_cast<std::uint8_t>( nd::kind::wallbang ) )
+	{
+		const Vector3 wallPlayerPos = player->GetOrigin();
+		QAngle wallView;
+		if ( !GetRenderCameraAngles( wallView ) )
+		{
+			m_AimErrorX = m_AimErrorY = 0.f;
+			ResetWallbangAction();
+			return;
+		}
+		DriveWallbang( wallPlayerPos , wallView , TickCount() , Now() );
+		return;
+	}
+
 	if ( kind == 0xff )
 	{
 		CancelThrow( activationHeld );
 		return;
 	}
 
-	const std::uint32_t tick = TickCount();
-
-	if ( m_ThrowPhase != ThrowPhase::Idle )
+	// 投掷路径需要 active weapon(墙点已在上方处理并返回)
+	auto* weapon = GetCL_Weapons()->GetLocalActiveWeapon();
+	if ( !weapon )
 	{
-		if ( menu_state::autoAim )
-		{
-			QAngle liveView;
-			if ( GetRenderCameraAngles( liveView ) )
-			{
-				float error = 0.f;
-				AimAt( m_ActiveLineup , liveView , error );
-			}
-		}
-		DriveThrow( reinterpret_cast<std::uintptr_t>( player ) , reinterpret_cast<std::uintptr_t>( weapon ) , tick , Now() );
+		CancelThrow( activationHeld );
 		return;
 	}
+
+	// ---- 时间线回放(点位库):激活期间独占执行路径 ----
+	if ( m_TimelineActive )
+	{
+		if ( kind != m_TimelineKind )
+		{
+			// 切枪/雷已扔出(武器类型变化):中止并锁存
+			CancelThrow( true );
+			return;
+		}
+		UpdateTimelinePlayback();
+		return;
+	}
+
+	const std::uint32_t tick = TickCount();
 
 	if ( m_ActivationLatched )
 		return;
@@ -1961,12 +1809,50 @@ void CHelper::Tick()
 
 	const bool positionReady = ExecutionPositionReady( lineup , playerPos );
 
-	// 自动走位:不到位时按 WASD 走向点位,到位后反向刹车(W↔S, A↔D)
+	// 自动走位:不到位时按 WASD 走向点位,到位后反向刹车(W↔S, A↔D)。
+	// 高速减速带:预测"松手停点"会落进出手圈时,提前松键靠摩擦滑行减速 ——
+	// 进圈时速度已降到慢走量级,反向刹车的滑过误差缩小到 ~1/5
 	if ( menu_state::autoMove )
 	{
 		if ( !positionReady )
 		{
-			DriveToPoint( lineup , playerPos , viewAngles );
+			// 减速带判定:4-tick 速度外推的预测停点进入圈(或已越过目标)→ 滑行
+			Vector3 toPoint = lineup.position - playerPos;
+			toPoint.m_z = 0.f;
+			const float dist = toPoint.Length();
+			bool wantCoast = false;
+			{
+				const Vector3 vel = player->m_vecAbsVelocity();
+				const float speed = std::sqrtf( vel.m_x * vel.m_x + vel.m_y * vel.m_y );
+				const Vector3 predicted = playerPos + vel * ( 4.f / 64.f );
+				Vector3 toPredicted = lineup.position - predicted;
+				toPredicted.m_z = 0.f;
+				const float predictedDist = toPredicted.Length();
+
+				// 预测停点入圈,或已越过目标(冲头)且速度尚高 → 滑行减速
+				if ( predictedDist <= menu_state::releaseRadius
+					|| ( predictedDist > dist && speed > 100.f ) )
+					wantCoast = true;
+			}
+
+			if ( wantCoast )
+			{
+				ReleaseMovement( false );
+				// 滑行超时兜底:0.5s 没减完就强制回粗走
+				if ( m_CoastStart == std::chrono::steady_clock::time_point{} )
+					m_CoastStart = Now();
+				if ( Now() - m_CoastStart > std::chrono::milliseconds( 500 ) )
+				{
+					m_Coasting = false;
+					m_CoastStart = {};
+				}
+			}
+			else
+			{
+				m_Coasting = false;
+				m_CoastStart = {};
+				DriveToPoint( lineup , playerPos , viewAngles );
+			}
 			m_Braking = false;
 		}
 		else if ( !m_Braking
@@ -2040,11 +1926,12 @@ void CHelper::Tick()
 		&& Now() - m_LockStarted
 			>= std::chrono::milliseconds( std::clamp( menu_state::lockTimeMs , 0 , 250 ) );
 
-	// 内置点位与用户录制点位都参与自动执行(manual 仅用于来源标记,不排除执行)
+	// 点位(时间线/用户自录)都参与自动执行
 	if ( menu_state::autoExecute && settled )
 	{
-		if ( !BeginThrow( lineup , reinterpret_cast<std::uintptr_t>( player ) ,
-			reinterpret_cast<std::uintptr_t>( weapon ) , tick , Now() ) )
+		if ( lineup.frames && lineup.frameCount > 0 )
+			StartTimelinePlayback( lineup.frames , lineup.frameCount , lineup.name , lineup.kind );
+		else
 			m_ActivationLatched = true;
 	}
 }
@@ -2078,88 +1965,13 @@ namespace
 	}
 }
 
-void CHelper::DrawMarker( ImDrawList* drawList , const LineupView& lineup , bool selected , float yOffset ) const
+// 名牌图标字符:墙点画"当前手持武器"的图标(Collect 已按当前枪过滤,显示即匹配);
+// 投掷点不在这走(投掷图标由 HelperKindIcon 提供)
+std::string CHelper::LineupIconChar( const LineupView& lineup ) const
 {
-	ImVec2 screen;
-	const Vector3 world = lineup.position + Vector3{ 0.f , 0.f , 8.f };
-	if ( !Math::WorldToScreen( world , screen ) )
-		return;
-
-	ImFont* font = g_font->f_childs.get_font();
-	const float fontSize = font ? font->FontSize : 15.f;
-
-	const std::string title = lineup.name.empty() ? "?" : lineup.name;
-	const ImVec2 titleSize = font
-		? font->CalcTextSizeA( fontSize , FLT_MAX , -1.f , title.c_str() )
-		: ImVec2( 100.f , 20.f );
-
-	// 副标题:投掷动作 + 距离(米)
-	std::string subtitle;
-	if ( menu_state::showAction && !lineup.action.empty() )
-		subtitle = lineup.action;
-	if ( menu_state::showDistance )
-	{
-		if ( !subtitle.empty() )
-			subtitle += "  ";
-		char buf[ 32 ];
-		std::snprintf( buf , sizeof( buf ) , "%.0fm" , lineup.distance / 52.0f );
-		subtitle += buf;
-	}
-	const ImVec2 subSize = ( !subtitle.empty() && font )
-		? font->CalcTextSizeA( fontSize - 2.f , FLT_MAX , -1.f , subtitle.c_str() )
-		: ImVec2{};
-
-	const float textW = std::max( titleSize.x , subSize.x );
-	const float textH = titleSize.y + ( subSize.y > 0.f ? 2.f + subSize.y : 0.f );
-
-	const float alpha = std::clamp( 255.f - lineup.distance * 0.12f , 75.f , 255.f );
-	const ImU32 base = AccentColor( alpha );
-
-	// 布局(Hysteria 风格:图标槽 + 分隔线 + 文本)
-	const float iconSize = 18.f;
-	const float padX = 6.f;
-	const float padY = 4.f;
-	const float cardW = iconSize + 6.f + textW + 14.f;
-	const float cardH = std::max( iconSize , textH ) + padY * 2.f;
-
-	const float left = screen.x - cardW * 0.5f;
-	const float top = screen.y - cardH - 18.f + yOffset;
-	const float iconLeft = left + padX;
-	const float iconTop = top + ( cardH - iconSize ) * 0.5f;
-	const float dividerX = iconLeft + iconSize + 3.f;
-	const float textLeft = dividerX + 6.f;
-	const float textTop = top + ( cardH - textH ) * 0.5f;
-
-	// 背景卡片(半透明黑,圆角)
-	const ImU32 bg = IM_COL32( 0 , 0 , 0 , static_cast<int>( alpha * 0.72f ) );
-	drawList->AddRectFilled( { left , top } , { left + cardW , top + cardH } , bg , 4.f );
-
-	// 投掷物图标(esp_icons)
-	const char* icon = HelperKindIcon( lineup.kind );
-	if ( icon && g_font && g_font->f_weapon_icons.get_font() )
-	{
-		ImFont* iconFont = g_font->f_weapon_icons.get_font();
-		const float iconFontSize = 14.f;
-		const ImVec2 iconTextSize = iconFont->CalcTextSizeA( iconFontSize , FLT_MAX , -1.f , icon );
-		drawList->AddText( iconFont , iconFontSize ,
-			{ iconLeft + ( iconSize - iconTextSize.x ) * 0.5f , iconTop + ( iconSize - iconTextSize.y ) * 0.5f } ,
-			base , icon );
-	}
-	else
-	{
-		drawList->AddRectFilled( { iconLeft , iconTop } , { iconLeft + iconSize , iconTop + iconSize } , base , 2.f );
-	}
-
-	// 分隔线
-	drawList->AddRectFilled( { dividerX , top + 2.f } , { dividerX + 2.f , top + cardH - 2.f } , base , 1.f );
-
-	// 文本(标题 + 副标题:动作/距离)
-	if ( font )
-	{
-		drawList->AddText( font , fontSize , { textLeft , textTop } , IM_COL32( 245 , 247 , 252 , static_cast<int>( alpha ) ) , title.c_str() );
-		if ( !subtitle.empty() )
-			drawList->AddText( font , fontSize - 2.f , { textLeft , textTop + titleSize.y + 2.f } , base , subtitle.c_str() );
-	}
+	if ( lineup.kind == static_cast<std::uint8_t>( nd::kind::wallbang ) )
+		return WeaponIconChar( WeaponShortName( ActiveWeaponItem() ) );
+	return {};
 }
 
 void CHelper::DrawStandMarker( ImDrawList* drawList , const LineupView& lineup , bool standing ) const
@@ -2264,9 +2076,15 @@ void CHelper::DrawMouseAimPoints( ImDrawList* drawList , int screenW , int scree
 		if ( font )
 		{
 			const std::string name = a.lineup->name.empty() ? "?" : a.lineup->name;
+			// 墙点标注(Crouch/Jump)副标题
 			std::string action;
-			if ( menu_state::showAction && !a.lineup->action.empty() )
-				action = a.lineup->action;
+			if ( a.lineup->kind == static_cast<std::uint8_t>( nd::kind::wallbang ) )
+			{
+				if ( a.lineup->annotations & nd::action_crouch )
+					action = "Crouch";
+				if ( a.lineup->annotations & nd::action_jump )
+					action = action.empty() ? "Jump" : action + "+Jump";
+			}
 			const ImU32 textCol = converged ? themeCol : grayTextCol;
 
 			const ImVec2 nameSize = font->CalcTextSizeA( fontSize , FLT_MAX , -1.f , name.c_str() );
@@ -2318,17 +2136,14 @@ void CHelper::DrawRecordStatus( ImDrawList* drawList , int screenW , int screenH
 	const float titleSize = 18.f;
 	const char* timeStr = timeBuf;
 
-	// 参数行(仅就绪后)
+	// 参数行(仅就绪后):帧数 + 出手状态
 	std::string params;
 	if ( m_SessionReady )
 	{
 		char buf[ 160 ];
-		std::snprintf( buf , sizeof( buf ) , "run=%u  aj=%u  %s%s%s  str=%.2f" ,
-			m_SessionRunTicks , m_SessionAfterJumpTicks ,
-			m_SessionWasCrouch ? "crouch " : "" ,
-			m_SessionWasWalk ? "walk " : "" ,
-			m_SessionWasAirborne ? "jump" : "" ,
-			m_SessionStrength );
+		std::snprintf( buf , sizeof( buf ) , "frames=%zu  %s" ,
+			m_SessionFrames.size() ,
+			m_SessionTail >= 0 ? "thrown" : "armed" );
 		params = buf;
 	}
 
@@ -2444,8 +2259,35 @@ auto CHelper::OnRender( ImDrawList* drawList , int screenW , int screenH ) -> vo
 		ImFont* font = g_font->f_childs.get_font();
 		const float fontSize = font ? font->FontSize : 14.f;
 
+		// 图标(投掷物;墙点组用组内首点的武器图标)——先量宽再布局
+		const char* icon = g.kind == static_cast<std::uint8_t>( nd::kind::wallbang )
+			? nullptr : HelperKindIcon( g.kind );
+		const std::string weaponIcon = !g.points.empty()
+			? LineupIconChar( *g.points.front() ) : std::string();
+		ImFont* iconFont = g_font ? g_font->f_weapon_icons.get_font() : nullptr;
+		const float iconFontSize = 14.f;
+		const char* iconText = icon ? icon : weaponIcon.c_str();
+		const bool hasIcon = ( icon || !weaponIcon.empty() ) && iconFont;
+
+		// 图标槽:宽度基准 18,字形更宽随之加宽;高度固定 16,不随字形撑高名牌。
+		// 枪械字形(墙点)宽高比大,按目标宽 22 反算字号,不同枪的图标宽度保持一致。
+		const float iconBase = 18.f;
+		const float iconH = 16.f;
+		float drawIconSize = iconFontSize;
+		float iconW = iconBase;
+		ImVec2 iconTextSize{};
+		if ( hasIcon )
+		{
+			iconTextSize = iconFont->CalcTextSizeA( drawIconSize , FLT_MAX , -1.f , iconText );
+			if ( !icon && iconTextSize.x > 22.f )
+			{
+				drawIconSize = std::max( 8.f , iconFontSize * 22.f / iconTextSize.x );
+				iconTextSize = iconFont->CalcTextSizeA( drawIconSize , FLT_MAX , -1.f , iconText );
+			}
+			iconW = std::max( iconBase , iconTextSize.x + 6.f );
+		}
+
 		// 名牌尺寸:图标槽 + 分隔线 + 垂直堆叠的名字(带距离)
-		const float iconSize = 18.f;
 		const float padX = 6.f;
 		const float padY = 4.f;
 
@@ -2469,35 +2311,30 @@ auto CHelper::OnRender( ImDrawList* drawList , int screenW , int screenH ) -> vo
 			totalH += std::max( 0.f , sz.y - 1.f );
 		}
 
-		const float cardW = iconSize + 6.f + maxTextW + padX * 2.f + 8.f;
-		const float cardH = std::max( iconSize , totalH ) + padY * 2.f;
+		const float cardW = iconW + 6.f + maxTextW + padX * 2.f + 8.f;
+		const float cardH = std::max( iconH , totalH ) + padY * 2.f;
 
 		const float left = screen.x - cardW * 0.5f;
 		const float top = screen.y - cardH - 18.f;
+		const float iconLeft = left + padX;
+		const float iconTop = top + ( cardH - iconH ) * 0.5f;
+		const float dividerX = iconLeft + iconW + 3.f;
 
 		const ImU32 base = AccentColor( 255 );
 		drawList->AddRectFilled( { left , top } , { left + cardW , top + cardH } , IM_COL32( 0 , 0 , 0 , 150 ) , 4.f );
 
-		// 图标(投掷物)
-		const float iconLeft = left + padX;
-		const float iconTop = top + ( cardH - iconSize ) * 0.5f;
-		const char* icon = HelperKindIcon( g.kind );
-		if ( icon && g_font && g_font->f_weapon_icons.get_font() )
+		if ( hasIcon )
 		{
-			ImFont* iconFont = g_font->f_weapon_icons.get_font();
-			const float iconFontSize = 14.f;
-			const ImVec2 iconTextSize = iconFont->CalcTextSizeA( iconFontSize , FLT_MAX , -1.f , icon );
-			drawList->AddText( iconFont , iconFontSize ,
-				{ iconLeft + ( iconSize - iconTextSize.x ) * 0.5f , iconTop + ( iconSize - iconTextSize.y ) * 0.5f } ,
-				base , icon );
+			drawList->AddText( iconFont , drawIconSize ,
+				{ iconLeft + ( iconW - iconTextSize.x ) * 0.5f , iconTop + ( iconH - iconTextSize.y ) * 0.5f } ,
+				base , iconText );
 		}
 		else
 		{
-			drawList->AddRectFilled( { iconLeft , iconTop } , { iconLeft + iconSize , iconTop + iconSize } , base , 2.f );
+			drawList->AddRectFilled( { iconLeft , iconTop } , { iconLeft + iconW , iconTop + iconH } , base , 2.f );
 		}
 
 		// 分隔线
-		const float dividerX = iconLeft + iconSize + 3.f;
 		drawList->AddRectFilled( { dividerX , top + 2.f } , { dividerX + 2.f , top + cardH - 2.f } , base , 1.f );
 
 		// 垂直堆叠名字
