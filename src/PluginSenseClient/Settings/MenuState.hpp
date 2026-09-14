@@ -140,6 +140,13 @@ namespace menu_state
 	extern bool bulletSparks;
 	extern ImVec4 sparksColor;
 
+	// --- Server Lagger(语音包轰炸)---
+	extern bool serverLagger;              // 总开关
+	extern int serverLaggerMode;           // 0 = 1475 字节小包 / 1 = 16320 字节大包
+	// 两个档案的"每 tick 数据报上限"不同,各存一份,切档不互相覆盖
+	extern int serverLaggerAmountSmall;    // 1475 档:1 ~ 14
+	extern int serverLaggerAmountLarge;    // 16320 档:1 ~ 14(对齐 2.cpp 作者实测的安全线,超过会触发游戏侧溢出报错)
+
 	// --- Aimbot(aimlock)---
 	extern bool aimbotEnabled;      // 总开关
 	extern bool aimbotPartHead;     // Hitbox:头

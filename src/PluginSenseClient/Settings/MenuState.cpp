@@ -100,6 +100,13 @@ namespace menu_state
 	bool bulletSparks = false;
 	ImVec4 sparksColor = { 0.68f, 0.75f, 1.0f, 1.0f }; // 淡蓝白
 
+	// --- Server Lagger(语音包轰炸)---
+	bool serverLagger = false;
+	// 默认对齐参考实现:小包(1475)+ 每 tick 1 个数据报。大包档实测触发过游戏侧溢出报错,不做默认。
+	int serverLaggerMode = 0;
+	int serverLaggerAmountSmall = 1;   // 1475 档上限 14
+	int serverLaggerAmountLarge = 1;   // 16320 档上限同为 14
+
 	// --- Aimbot(aimlock)---
 	bool aimbotEnabled = false;
 	// Hitbox 默认全勾:勾选多个 = 智能模式,准心离哪个部位近就瞄哪个

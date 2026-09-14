@@ -161,6 +161,7 @@
     <ClCompile Include="src\PluginSenseClient\Features\CMotionCamera\CMotionCamera.cpp" />
     <ClCompile Include="src\PluginSenseClient\Features\CVelocityDisplay\CVelocityDisplay.cpp" />
     <ClCompile Include="src\PluginSenseClient\Features\CFakeCooldown\CFakeCooldown.cpp" />
+    <ClCompile Include="src\PluginSenseClient\Features\CServerLagger\CServerLagger.cpp" />
     <ClCompile Include="src\PluginSenseClient\Features\CHitLog\CHitLog.cpp" />
     <ClCompile Include="src\PluginSenseClient\Features\CLobbySpoof\CLobbySpoof.cpp" />
     <ClCompile Include="src\PluginSenseClient\Features\CWeaponModel\CWeaponModel.cpp" />
@@ -395,6 +396,7 @@
     <ClInclude Include="src\PluginSenseClient\Features\CWeather\weather_particles.hpp" />
     <ClInclude Include="src\PluginSenseClient\Features\CVelocityDisplay\CVelocityDisplay.hpp" />
     <ClInclude Include="src\PluginSenseClient\Features\CFakeCooldown\CFakeCooldown.hpp" />
+    <ClInclude Include="src\PluginSenseClient\Features\CServerLagger\CServerLagger.hpp" />
     <ClInclude Include="src\PluginSenseClient\Features\CHitLog\CHitLog.hpp" />
     <ClInclude Include="src\PluginSenseClient\Features\CLobbySpoof\CLobbySpoof.hpp" />
     <ClInclude Include="src\PluginSenseClient\Features\CWeaponModel\CWeaponModel.hpp" />

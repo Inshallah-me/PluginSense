@@ -15,6 +15,7 @@
 #include <PluginSenseClient/Features/CHelper/CHelper.hpp>
 #include <PluginSenseClient/Features/CHelper/CHelperRecorder.hpp>
 #include <PluginSenseClient/Features/CAimLock/CAimLock.hpp> // aimbot 键 extern(g_aimbot_key/g_override_key)权威声明
+#include <PluginSenseClient/Features/CServerLagger/CServerLagger.hpp> // server lagger 键 extern(g_toggle_key)权威声明
 
 #define half_height 255
 #define full_height 525
@@ -639,6 +640,27 @@ namespace framework
 						popup->add_dropdown("Log style", &menu_state::hitlogType, { "PluginSense", "MemeSense" });
 					});
 					log_settings->set_inlined();
+
+					// Server Lagger:向服务器刷 clc_VoiceData(语音包),按客户端 tick 发包
+					controller->add_checkbox("Server Lagger", &menu_state::serverLagger);
+					auto lagger_settings = controller->add_popup("Server Lagger", true, [](framework::c_popup* popup) {
+						// Small packets:单条约 1.5KB,总量刚好卡在引擎单条消息额度之下(默认档)
+						// Large packets:单条约 16KB,超出该额度,会触发游戏侧溢出报错,慎用
+						popup->add_dropdown("Packet profile", &menu_state::serverLaggerMode, {
+							"Small packets", "Large packets"
+						});
+						// 两个档案各一条滑条,量程即该档案的真实上限,按档案只显示其中一条。
+						// Large 档同样钳 14(2.cpp 作者实测的安全线,超过会触发游戏侧溢出报错)
+						auto amount_small = popup->add_slider_int("Datagrams / tick", &menu_state::serverLaggerAmountSmall, 1, 14);
+						amount_small->set_callback_visibility([] { return menu_state::serverLaggerMode == 0; });
+						auto amount_large = popup->add_slider_int("Datagrams / tick", &menu_state::serverLaggerAmountLarge, 1, 14);
+						amount_large->set_callback_visibility([] { return menu_state::serverLaggerMode == 1; });
+					});
+					lagger_settings->set_inlined();
+					// 按键必须排在 inlined popup 之后:popup 只认紧挨着的上一个控件当父控件才贴得住齿轮。
+					// inlined 控件不占纵向空间,所以这行渲染出来正好落在勾选框下面。
+					// 键是触发条件不是开关:勾选框关着按键无效;没绑键时视为恒激活。
+					controller->add_keybind("Server Lagger key", &server_lagger::g_toggle_key)->suppress_next_keyup();
 				});
 
 				window->build_child("Chat spammer", framework::child_width::half, full_height, [](framework::c_child* controller) {
@@ -1013,6 +1035,7 @@ namespace framework
 		add_active_keybind(entries, "Override hitbox", aimbot::g_override_key);
 		add_active_keybind(entries, "Helper", helper::g_helper_key);
 		add_active_keybind(entries, "Recorder", helper::g_record_key);
+		add_active_keybind(entries, "Server Lagger", server_lagger::g_toggle_key);
 		this->m_widgets->keybind_manager()->update_keybinds(entries);
 		this->m_widgets->draw();
 	}
@@ -1051,4 +1074,9 @@ namespace aimbot
 	framework::key_var_t g_aimbot_key{}; // 默认不绑键,用户自行绑定(对齐 helper 主键惯例)
 	// 覆盖 Hitbox 键:默认不绑(不激活 = 正常模式),默认 Toggle
 	framework::key_var_t g_override_key{ 0 , framework::key_mode_t::toggle };
+}
+
+namespace server_lagger
+{
+	framework::key_var_t g_toggle_key{ 0 , framework::key_mode_t::toggle }; // 默认不绑;键是触发条件,见 CServerLagger.cpp
 }

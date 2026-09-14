@@ -31,6 +31,7 @@
 #include <PluginSenseClient/Features/CHelper/CHelperRecorder.hpp>
 #include <PluginSenseClient/Features/CBulletSparks/CBulletSparks.hpp>
 #include <PluginSenseClient/Features/CAimLock/CAimLock.hpp>
+#include <PluginSenseClient/Features/CServerLagger/CServerLagger.hpp>
 #include <PluginSenseClient/Settings/MenuState.hpp>
 #include <GameClient/CL_Players.hpp>
 #include <PluginSenseClient/GUI/framework_w/framework/menu.hh>
@@ -67,6 +68,10 @@ auto CPluginSenseClient::OnDestroy() -> void
 
 auto CPluginSenseClient::OnFrameStageNotify( int FrameStage ) -> void
 {
+	// Server Lagger:只要连着服务器就该继续发包,所以不挑 FSN 阶段、也不受 pawn / 菜单可见性影响。
+	// 它内部按客户端 tick 去重,一帧内被多次调用也只会命中一次。
+	GetServerLagger()->OnFrame();
+
 	if ( FrameStage == 6 )
 		{
 			GetVelocityDisplay()->OnFrame();

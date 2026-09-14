@@ -19,6 +19,38 @@
 if ( !##Interface##_Search::##FuncName##Fn.Search() )\
 	bIsReady = false;
 
+namespace
+{
+	// 模块镜像范围(base / 结束地址):校验解析结果确实落在目标模块内
+	bool GetModuleImageRange( const char* szModuleName , uintptr_t& Base , uintptr_t& End )
+	{
+		const auto Module = reinterpret_cast< uintptr_t >( GetModuleHandleA( szModuleName ) );
+		if ( !Module )
+			return false;
+
+		const auto pDosHeader = reinterpret_cast< const IMAGE_DOS_HEADER* >( Module );
+		if ( pDosHeader->e_magic != IMAGE_DOS_SIGNATURE )
+			return false;
+
+		const auto pNtHeader = reinterpret_cast< const IMAGE_NT_HEADERS* >( Module + pDosHeader->e_lfanew );
+		if ( pNtHeader->Signature != IMAGE_NT_SIGNATURE )
+			return false;
+
+		Base = Module;
+		End = Module + pNtHeader->OptionalHeader.SizeOfImage;
+
+		return true;
+	}
+
+	// 从 RIP 相对指令解目标地址:位移存放处 + 后继指令地址 + disp(带符号)
+	uintptr_t ResolveRipRef( uintptr_t DisplacementAddress , uintptr_t NextInstruction )
+	{
+		const auto Displacement = *reinterpret_cast< const std::int32_t* >( DisplacementAddress );
+
+		return NextInstruction + static_cast< uintptr_t >( static_cast< std::intptr_t >( Displacement ) );
+	}
+}
+
 namespace SDK
 {
 	IVEngineToClient* Interfaces::g_pEngineToClient = nullptr;
@@ -39,6 +71,8 @@ namespace SDK
 	void** Pointers::g_ppParticleManager = nullptr;
 	void** Pointers::g_ppGameRules = nullptr;
 	void** Pointers::g_ppEntityList = nullptr;
+	uintptr_t Pointers::g_NetworkMessages = 0;
+	void** Pointers::g_ppNetworkGameClient = nullptr;
 
 	IVEngineToClient* Interfaces::EngineToClient()
 	{
@@ -358,5 +392,101 @@ GetGameEntitySystemPointer:;
 		}
 
 		return g_ppEntityList ? *g_ppEntityList : nullptr;
+	}
+
+	// CNetworkMessages 是 networksystem.dll 里的静态对象,构造函数把虚表写进对象首字段:
+	//   lea rax, ??_7CNetworkMessages@@6B@
+	//   mov cs:g_pNetworkMessages, rax
+	// 特征码锚在 lea 上;解出虚表与对象地址后用「对象首字段 == 虚表」自校验。
+	// 解析只做一次(含失败):特征码失配时不能每帧重扫整个模块,否则会持续掉帧。
+	auto Pointers::NetworkMessages() -> void*
+	{
+		static bool bResolveAttempted = false;
+
+		if ( !bResolveAttempted )
+		{
+			bResolveAttempted = true;
+
+			const auto RefSite = reinterpret_cast< uintptr_t >( FindPattern( NETWORKSYSTEM_DLL , XorStr( "48 8D 05 ? ? ? ? 48 89 05 ? ? ? ? 4C 8D 0D ? ? ? ? 0F B6 44 24 ? 4D 8D 43 ? 24 F9" ) ) );
+			if ( !RefSite )
+			{
+				DEV_LOG( "[error] CNetworkMessages reference not found - feature disabled\n" );
+
+				return nullptr;
+			}
+
+			const uintptr_t Vtable = ResolveRipRef( RefSite + 3 , RefSite + 7 );
+			const uintptr_t Object = ResolveRipRef( RefSite + 10 , RefSite + 14 );
+
+			uintptr_t ModuleBase = 0;
+			uintptr_t ModuleEnd = 0;
+			const bool bValid = GetModuleImageRange( NETWORKSYSTEM_DLL , ModuleBase , ModuleEnd )
+				&& Object >= ModuleBase && Object < ModuleEnd
+				&& *reinterpret_cast< const uintptr_t* >( Object ) == Vtable;
+
+			if ( !bValid )
+			{
+				DEV_LOG( "[error] CNetworkMessages resolve failed - feature disabled\n" );
+
+				return nullptr;
+			}
+
+			g_NetworkMessages = Object;
+		}
+
+		return reinterpret_cast< void* >( g_NetworkMessages );
+	}
+
+	// CNetworkGameClient 的全局指针在 engine2.dll,由 CCreateGameClientJob 分配后写入:
+	//   cmp cs:g_pNetworkGameClient, 0        -> 48 83 3D disp32 00
+	// 特征码从该函数入口开始(disp 在 +8,后继指令在 +13),解出的是「指针槽」地址。
+	// 同样只解析一次;槽位是运行期可变的,每次调用再解引用。
+	auto Pointers::NetworkGameClient() -> void*
+	{
+		static bool bResolveAttempted = false;
+
+		if ( !bResolveAttempted )
+		{
+			bResolveAttempted = true;
+
+			const auto RefSite = reinterpret_cast< uintptr_t >( FindPattern( ENGINE2_DLL , XorStr( "53 48 83 EC 20 48 83 3D ? ? ? ? 00 48 8B D9 8B 0D ? ? ? ?" ) ) );
+			if ( !RefSite )
+			{
+				DEV_LOG( "[error] NetworkGameClient reference not found - feature disabled\n" );
+
+				return nullptr;
+			}
+
+			const auto SlotAddress = ResolveRipRef( RefSite + 8 , RefSite + 13 );
+
+			uintptr_t ModuleBase = 0;
+			uintptr_t ModuleEnd = 0;
+			if ( !GetModuleImageRange( ENGINE2_DLL , ModuleBase , ModuleEnd )
+				|| SlotAddress < ModuleBase || SlotAddress >= ModuleEnd )
+			{
+				DEV_LOG( "[error] NetworkGameClient resolve failed - feature disabled\n" );
+
+				return nullptr;
+			}
+
+			g_ppNetworkGameClient = reinterpret_cast< void** >( SlotAddress );
+		}
+
+		if ( !g_ppNetworkGameClient )
+			return nullptr;
+
+		void* pNetworkGameClient = *g_ppNetworkGameClient;
+		if ( !pNetworkGameClient )
+			return nullptr; // 未连接 / 已销毁
+
+		// 虚表必须落在 engine2.dll 内:对象被释放后槽位可能还留着旧值
+		uintptr_t ModuleBase = 0;
+		uintptr_t ModuleEnd = 0;
+		const auto Vtable = *reinterpret_cast< const uintptr_t* >( pNetworkGameClient );
+		if ( !GetModuleImageRange( ENGINE2_DLL , ModuleBase , ModuleEnd )
+			|| Vtable < ModuleBase || Vtable >= ModuleEnd )
+			return nullptr;
+
+		return pNetworkGameClient;
 	}
 }

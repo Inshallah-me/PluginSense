@@ -31,6 +31,11 @@ namespace aimbot
 	extern framework::key_var_t g_override_key;
 }
 
+namespace server_lagger
+{
+	extern framework::key_var_t g_toggle_key;
+}
+
 static CSettingsJson g_CSettingsJson{};
 
 auto CSettingsJson::LoadConfig( const std::string& JsonFile ) -> void
@@ -139,6 +144,12 @@ auto CSettingsJson::LoadConfig( const std::string& JsonFile ) -> void
 		GetColorJson( SettingsJson, "velocity_low", &menu_state::lowSpeed.x ); GetColorJson( SettingsJson, "velocity_mid", &menu_state::midSpeed.x ); GetColorJson( SettingsJson, "velocity_high", &menu_state::highSpeed.x );
 		GetColorJson( SettingsJson, "velocity_graph_color", &menu_state::graphColor.x ); GetColorJson( SettingsJson, "damage_body", &menu_state::damageBody.x ); GetColorJson( SettingsJson, "damage_head", &menu_state::damageHead.x );
 		GetBoolJson( SettingsJson, "bullet_sparks", menu_state::bulletSparks ); GetColorJson( SettingsJson, "sparks_color", &menu_state::sparksColor.x );
+		// Server Lagger(语音包轰炸):两个档案各存一份每 tick 数据报数
+		GetBoolJson( SettingsJson, "server_lagger", menu_state::serverLagger );
+		GetIntJson( SettingsJson, "server_lagger_mode", menu_state::serverLaggerMode, 0, 1 );
+		GetIntJson( SettingsJson, "server_lagger_amount_small", menu_state::serverLaggerAmountSmall, 1, 14 );
+		GetIntJson( SettingsJson, "server_lagger_amount_large", menu_state::serverLaggerAmountLarge, 1, 14 );
+		GetIntJson( SettingsJson, "server_lagger_key", server_lagger::g_toggle_key.key, 0, 255 );
 			// World visuals
 			GetBoolJson( SettingsJson, "dof", menu_state::worldScene.dof );
 			GetBoolJson( SettingsJson, "dof_focus", menu_state::worldScene.dofFocus );
@@ -276,6 +287,7 @@ AddTextJson(ConfigWriter, "player_name", menu_state::playerName); AddTextJson(Co
 AddBoolJson(ConfigWriter, "velocity_text", menu_state::velocityText); AddBoolJson(ConfigWriter, "velocity_graph", menu_state::velocityGraph); AddBoolJson(ConfigWriter, "keystrokes", menu_state::keystrokes); AddFloatJson(ConfigWriter, "velocity_offset", menu_state::velocityOffset); AddBoolJson(ConfigWriter, "damage_log_enabled", menu_state::damageLogEnabled); AddBoolJson(ConfigWriter, "hitlog_enabled", menu_state::hitlogEnabled); AddBoolJson(ConfigWriter, "hitlog_victim", menu_state::hitlogVictim); AddIntJson(ConfigWriter, "hitlog_type", menu_state::hitlogType); AddBoolJson(ConfigWriter, "damage_indicator", menu_state::damageIndicator);
 AddColorJson(ConfigWriter, "velocity_low", &menu_state::lowSpeed.x); AddColorJson(ConfigWriter, "velocity_mid", &menu_state::midSpeed.x); AddColorJson(ConfigWriter, "velocity_high", &menu_state::highSpeed.x); AddColorJson(ConfigWriter, "velocity_graph_color", &menu_state::graphColor.x); AddColorJson(ConfigWriter, "damage_body", &menu_state::damageBody.x); AddColorJson(ConfigWriter, "damage_head", &menu_state::damageHead.x);
 		AddBoolJson(ConfigWriter, "bullet_sparks", menu_state::bulletSparks); AddColorJson(ConfigWriter, "sparks_color", &menu_state::sparksColor.x);
+AddBoolJson(ConfigWriter, "server_lagger", menu_state::serverLagger); AddIntJson(ConfigWriter, "server_lagger_mode", menu_state::serverLaggerMode); AddIntJson(ConfigWriter, "server_lagger_amount_small", menu_state::serverLaggerAmountSmall); AddIntJson(ConfigWriter, "server_lagger_amount_large", menu_state::serverLaggerAmountLarge); AddIntJson(ConfigWriter, "server_lagger_key", server_lagger::g_toggle_key.key);
 // World visuals
 AddBoolJson(ConfigWriter, "dof", menu_state::worldScene.dof);
 			AddBoolJson(ConfigWriter, "dof_focus", menu_state::worldScene.dofFocus);

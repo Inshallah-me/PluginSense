@@ -80,6 +80,10 @@ namespace SDK
 		static auto GameRules() -> void*;
 		// 实体表基址(dwEntityList,签名解析;vesta 同款方案)
 		static auto EntityList() -> void*;
+		// CNetworkMessages 静态单例本身(networksystem.dll;网络消息注册表)
+		static auto NetworkMessages() -> void*;
+		// CNetworkGameClient*(engine2.dll 全局指针;取 tick 与 net chan)
+		static auto NetworkGameClient() -> void*;
 
 	private:
 		static CGlobalVarsBase** g_ppCGlobalVarsBase;
@@ -88,5 +92,7 @@ namespace SDK
 		static void** g_ppParticleManager;
 		static void** g_ppGameRules;
 		static void** g_ppEntityList;
+		static uintptr_t g_NetworkMessages;
+		static void** g_ppNetworkGameClient;
 	};
 }
