@@ -15,8 +15,8 @@ namespace server_lagger
 }
 
 // Server Lagger:按客户端 tick 向服务器批量发送 clc_VoiceData 语音消息。
-// 每个新 tick 最多发 serverLaggerAmountSmall / serverLaggerAmountLarge
-// (按当前档案二选一)个数据报,每个数据报内打包 messages_per_datagram 条消息。
+// 发送节奏为 burst/rest 状态机(常量与说明见 CServerLagger.cpp):连发、饱和、歇息轮转,
+// 避免满速连发把发送队列灌满后反而降低送达率。
 class CServerLagger final
 {
 public:
@@ -31,6 +31,10 @@ private:
 	};
 
 	runtime_t m_Runtime{};
+	// 状态机:m_CycleTick 在连发阶段记录已投出的拍数,到 kBurstTicks 转入歇息,
+	// 歇满 kRestTicks 拍归零;m_BlockedTicks 记连续被 CanPacket 拦下的拍数(饱和判定)
+	int m_CycleTick = 0;
+	int m_BlockedTicks = 0;
 };
 
 auto GetServerLagger() -> CServerLagger*;

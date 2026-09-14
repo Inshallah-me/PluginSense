@@ -36,6 +36,12 @@ namespace
 	// clc_VoiceData = 22(netmessages.proto;svc_VoiceData 是 47,方向相反不要拿错)
 	constexpr int kVoiceDataMessageId = 22;
 
+	// 发送节奏:连发最多 kBurstTicks 拍;连续 kSaturationTicks 拍被 CanPacket 拦下视为
+	// 队列饱和,提前转入歇息;歇满 kRestTicks 拍后队列排空,重新开始下一波。
+	constexpr int kBurstTicks = 64;
+	constexpr int kRestTicks = 64;
+	constexpr int kSaturationTicks = 8;
+
 	// xuid 每次随机(参考实现如此);函数内静态,避免在 DLL 静态初始化期构造
 	std::uint64_t next_voice_xuid( )
 	{
@@ -220,13 +226,15 @@ namespace
 		return message;
 	}
 
-	// prototype 是模板消息:每条都克隆一份再投递,投递失败立刻停手(通道满了)
-	void send_voice_payload( void* channel , const voice_payload_t& payload , const server_lagger_profile_t& profile , std::uint32_t datagrams )
+	// prototype 是模板消息:每条都克隆一份再投递,投递失败立刻停手(通道满了)。
+	// 返回本 tick 是否至少投出一条,调用方只对实际投出的拍消耗 burst 预算。
+	bool send_voice_payload( void* channel , const voice_payload_t& payload , const server_lagger_profile_t& profile , std::uint32_t datagrams )
 	{
 		void* prototype = make_voice_message( payload );
 		if ( !prototype )
-			return;
+			return false;
 
+		bool sent_any = false;
 		bool transport_available = true;
 		for ( std::uint32_t datagram = 0; datagram < datagrams && transport_available; ++datagram )
 		{
@@ -247,6 +255,8 @@ namespace
 					transport_available = false;
 					break;
 				}
+
+				sent_any = true;
 			}
 
 			// 一批塞满就 Transmit 一次,把缓冲交给传输层;不调就要等引擎的常规发送
@@ -255,6 +265,8 @@ namespace
 		}
 
 		destroy_message( prototype );
+
+		return sent_any;
 	}
 }
 
@@ -268,6 +280,8 @@ void CServerLagger::OnFrame( )
 	if ( !menu_state::serverLagger || !key_active )
 	{
 		m_Runtime = { };
+		m_CycleTick = 0; // 状态全清,重新激活时从 burst 开局
+		m_BlockedTicks = 0;
 		return;
 	}
 
@@ -275,6 +289,8 @@ void CServerLagger::OnFrame( )
 	if ( !network_client )
 	{
 		m_Runtime = { };
+		m_CycleTick = 0;
+		m_BlockedTicks = 0;
 		return;
 	}
 
@@ -283,15 +299,46 @@ void CServerLagger::OnFrame( )
 		return;
 	m_Runtime = { network_client , current_tick };
 
-	void* channel = invoke_vcall< void* >( network_client , V::CNetworkGameClient::GetNetChannel , 0 );
-	if ( !channel || !invoke_vcall< bool >( channel , V::CNetChan::CanPacket ) )
+	// 歇息阶段:完全不发,让发送队列彻底排空
+	if ( m_CycleTick >= kBurstTicks )
+	{
+		if ( ++m_CycleTick >= kBurstTicks + kRestTicks )
+			m_CycleTick = 0;
+
 		return;
+	}
+
+	void* channel = invoke_vcall< void* >( network_client , V::CNetworkGameClient::GetNetChannel , 0 );
+	if ( !channel )
+		return;
+
+	if ( !invoke_vcall< bool >( channel , V::CNetChan::CanPacket ) )
+	{
+		// 连续被拦 = 队列已饱和:提前转入歇息
+		if ( ++m_BlockedTicks >= kSaturationTicks )
+		{
+			DEV_LOG( "[server-lagger] saturated after %d sent ticks, resting\n" , m_CycleTick );
+
+			m_CycleTick = kBurstTicks; // 转入歇息
+			m_BlockedTicks = 0;
+		}
+
+		return;
+	}
+	m_BlockedTicks = 0;
 
 	const server_lagger_profile_t& profile = selected_server_lagger_profile( );
 	// 滑条量程已经和档案一致,这里的 clamp 只是兜底(手改 JSON 之类)
 	const std::uint32_t amount = static_cast< std::uint32_t >( std::clamp( selected_server_lagger_amount( ) , 1 , profile.maximum_datagrams_per_tick ) );
 	const voice_payload_t payload = make_voice_payload( profile , next_voice_xuid( ) , static_cast< std::uint32_t >( current_tick ) );
-	send_voice_payload( channel , payload , profile , amount );
+
+	if ( send_voice_payload( channel , payload , profile , amount ) )
+	{
+		++m_CycleTick; // 实际投出的拍才消耗预算
+
+		if ( m_CycleTick == kBurstTicks )
+			DEV_LOG( "[server-lagger] burst budget done (%d ticks), resting\n" , kBurstTicks );
+	}
 }
 
 auto GetServerLagger() -> CServerLagger*
