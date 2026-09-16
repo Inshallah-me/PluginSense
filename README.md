@@ -13,3 +13,4 @@ Lightweight CS2 plugin made for double injecting with [GameSense](https://gamese
 - [Velocity](https://github.com/wubly/velocity)
 - [Vesta](https://github.com/Read1dno/vesta)
 - [Electro GUI](https://www.unknowncheats.me/forum/counter-strike-2-a/761976-gui-framework-electro.html)
+- [Helper data](https://e-z.bio/270)
