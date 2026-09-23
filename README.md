@@ -1,5 +1,9 @@
 # PluginSense [Join Discord](https://discord.gg/jqmZvefGfY)
 
+> **Version Notice**<br>
+> V1 is no longer maintained.<br>
+> V2 is currently not open source. Please join [Discord](https://discord.gg/jqmZvefGfY) to get it.
+
 Lightweight CS2 plugin made for double injecting with [GameSense](https://gamesense.pub).
 
 ## Build
